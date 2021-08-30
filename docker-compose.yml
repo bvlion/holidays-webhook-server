@@ -1,0 +1,32 @@
+version: '3.3'
+services:
+  web:
+    container_name: hw_web
+    build: ./docker/web
+    ports:
+      - 8000:80
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/web/php.ini:/usr/local/etc/php/php.ini
+      - ./src/logs:/var/log/apache2
+    depends_on:
+      - db
+
+  db:
+    container_name: hw_db
+    build: ./docker/db
+    restart: always
+    environment:
+      TZ: Asia/Tokyo
+      MYSQL_DATABASE: hw
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3346:3306"
+    volumes:
+      - ./docker/db/conf:/etc/mysql
+      - ./src/logs:/var/log/mysql
+      - ./docker/db/sql:/docker-entrypoint-initdb.d
