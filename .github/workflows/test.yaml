@@ -1,0 +1,55 @@
+name: test
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: Setup PHP 7.4
+        run: sudo update-alternatives --set php /usr/bin/php7.4
+
+      - name: composer install
+        run: |
+          cd src
+          docker run --rm --interactive --tty --volume $PWD:/app composer install
+          cd ..
+
+      - name: docker start
+        run: docker compose up --build -d
+
+      - name: test data insert
+        run: |
+          cd src
+          php artisan db:seed
+          cd ..
+
+      - name: Test
+        run: ./src/vendor/bin/phpunit
+
+      - name: Docker stop
+        run: docker compose stop
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_report
+          path: src/.phpunit.result.cache
+
+      - name: Slack Notification
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,action,took
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
