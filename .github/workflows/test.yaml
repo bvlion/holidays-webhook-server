@@ -18,14 +18,24 @@ jobs:
       - name: Setup PHP 7.4
         run: sudo update-alternatives --set php /usr/bin/php7.4
 
+      - name: cache vendor
+        id: cache
+        uses: actions/cache@v1
+        with:
+          path: ./src/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
       - name: composer install
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           cd src
           docker run --rm --interactive --volume $PWD:/app composer install
           cd ..
 
       - name: docker start
-        run: docker compose up --build -d
+        run: docker compose up -d
 
       - name: test data insert
         run: |
