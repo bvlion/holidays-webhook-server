@@ -44,7 +44,7 @@ jobs:
           cd ..
 
       - name: Test
-        run: ./src/vendor/bin/phpunit
+        run: cd src && ./vendor/bin/phpunit && cd ..
 
       - name: Docker stop
         run: docker-compose stop
