@@ -15,9 +15,6 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
 
-      - name: Setup PHP 7.4
-        run: sudo update-alternatives --set php /usr/bin/php7.4
-
       - name: cache vendor
         id: cache
         uses: actions/cache@v1
@@ -38,13 +35,10 @@ jobs:
         run: docker-compose up -d --build
 
       - name: test data insert
-        run: |
-          cd src
-          php artisan db:seed
-          cd ..
+        run: docker-compose exec -T web php artisan db:seed
 
       - name: Test
-        run: cd src && php artisan test && cd ..
+        run: docker-compose exec -T web php artisan test
 
       - name: Docker stop
         run: docker-compose stop
