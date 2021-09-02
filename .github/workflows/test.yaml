@@ -35,7 +35,7 @@ jobs:
           cd ..
 
       - name: docker start
-        run: docker compose up -d
+        run: docker-compose up -d --build
 
       - name: test data insert
         run: |
@@ -47,7 +47,7 @@ jobs:
         run: ./src/vendor/bin/phpunit
 
       - name: Docker stop
-        run: docker compose stop
+        run: docker-compose stop
 
       - name: Upload test report
         uses: actions/upload-artifact@v2
