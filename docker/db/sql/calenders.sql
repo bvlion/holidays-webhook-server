@@ -6,8 +6,8 @@ CREATE TABLE calenders
     target_type ENUM('group', 'user') NOT NULL COMMENT 'グループ or ユーザー',
     target_date DATE NOT NULL COMMENT '手動設定対象日',
     is_holiday TINYINT(4) NOT NULL DEFAULT '0' COMMENT '祝日設定（祝日にする・祝日にしない）',
-    created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '作成日時',
-    updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新日時',
-    deleted DATETIME COMMENT '削除日時',
+    created_at DATETIME NOT NULL COMMENT '作成日時',
+    updated_at DATETIME NOT NULL COMMENT '更新日時',
+    deleted_at DATETIME COMMENT '削除日時',
     PRIMARY KEY (id)
 ) COMMENT '手動設定カレンダー情報';

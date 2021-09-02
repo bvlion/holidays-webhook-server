@@ -8,8 +8,8 @@ CREATE TABLE commands
     method VARCHAR(32) NOT NULL COMMENT 'リクエストメソッド',
     headers VARCHAR(4096) NOT NULL COMMENT 'ヘッダ情報（json 形式）',
     parameters VARCHAR(4096) NOT NULL COMMENT 'パラメータ情報（json 形式）',
-    created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '作成日時',
-    updated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新日時',
-    deleted DATETIME COMMENT '削除日時',
+    created_at DATETIME NOT NULL COMMENT '作成日時',
+    updated_at DATETIME NOT NULL COMMENT '更新日時',
+    deleted_at DATETIME COMMENT '削除日時',
     PRIMARY KEY (id)
 ) COMMENT 'コマンド情報';
