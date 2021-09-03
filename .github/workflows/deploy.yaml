@@ -41,11 +41,11 @@ jobs:
 
       - name: rsync
         run: cd src && rsync -av \
+            -e "ssh -p ${{ secrets.SSH_PORT }}" \
             --exclude='logs' \
             --exclude='phpunit.xml' \
             --exclude='.env' \
             --exclude='tests' \
-            -e "ssh -p ${{ secrets.SSH_PORT }}" \
             . ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
 
       - name: Slack Notification
