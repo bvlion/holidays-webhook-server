@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  setup:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -36,11 +36,13 @@ jobs:
           cd ..
 
       - name: delete server files
-        run: ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+        run: |
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
              "cd ${{ secrets.SSH_DIR }} && ls | grep -v -E 'logs' | xargs rm -rf"
 
       - name: rsync
-        run: cd src && rsync -av \
+        run: |
+          cd src && rsync -av \
             -e "ssh -p ${{ secrets.SSH_PORT }}" \
             --exclude='logs' \
             --exclude='phpunit.xml' \
