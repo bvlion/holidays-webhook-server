@@ -7,3 +7,6 @@ docker-compose.override.yml
 /src/logs/*
 !/src/logs/.gitkeep
 google_client_secret
+report
+src/result.xml
+lib/phpunit.xslt
