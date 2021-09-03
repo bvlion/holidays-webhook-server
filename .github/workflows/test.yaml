@@ -34,6 +34,9 @@ jobs:
       - name: docker start
         run: docker-compose up -d --build
 
+      - name: wait start db
+        run: docker-compose start db-check
+
       - name: test data insert
         run: docker-compose exec -T web php artisan db:seed
 
