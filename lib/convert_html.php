@@ -16,4 +16,4 @@ $xml->load($result_xml);
 $proc = new XsltProcessor();
 $proc->importStylesheet($xsl);
 $result_html = $proc->transformToXML($xml);
-file_put_contents($current . "/../report/result.html", $result_html);
+file_put_contents($current . "/../report/index.html", $result_html);
