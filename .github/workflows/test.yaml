@@ -32,10 +32,10 @@ jobs:
           cd ..
 
       - name: docker start
-        run: docker-compose up -d --build
+        run: docker-compose up --build -d web db
 
       - name: wait start db
-        run: docker-compose start db-check
+        run: docker-compose up --build db-check
 
       - name: test data insert
         run: docker-compose exec -T web php artisan db:seed
