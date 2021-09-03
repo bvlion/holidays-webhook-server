@@ -15,7 +15,7 @@ jobs:
       - name: export ssh keys
         run: |
           mkdir -p ~/.ssh
-          echo ${{ secrets.ID_RSA }} > ~/.ssh/id_rsa
+          echo -e "${{ secrets.ID_RSA }}" > ~/.ssh/id_rsa
           echo ${{ secrets.KNOWN_HOSTS }} > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
 
