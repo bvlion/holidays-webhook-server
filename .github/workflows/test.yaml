@@ -37,19 +37,19 @@ jobs:
       - name: test data insert
         run: docker-compose exec -T web php artisan db:seed
 
-      - name: Test
+      - name: test
         run: docker-compose exec -T web php artisan test
 
       - name: Docker stop
         run: docker-compose stop
 
-      - name: Upload test report
+      - name: upload test report
         uses: actions/upload-artifact@v2
         with:
           name: test_report
           path: src/.phpunit.result.cache
 
-      - name: Slack Notification
+      - name: slack notification
         uses: 8398a7/action-slack@v3
         if: always()
         with:
