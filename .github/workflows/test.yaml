@@ -7,13 +7,26 @@ on:
   pull_request:
     branches:
       - 'main'
+  pull_request_target:
+    branches:
+      - 'main'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]') ||
+      (github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]')
     steps:
       - name: checkout
+        if: ${{ github.event_name != 'pull_request_target' }}
         uses: actions/checkout@v2
+        
+      - name: Checkout PR
+        if: ${{ github.event_name == 'pull_request_target' }}
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: cache vendor
         id: cache
@@ -46,7 +59,6 @@ jobs:
           curl -o lib/phpunit.xslt https://gist.githubusercontent.com/jrfnl/3c28ea6d9b07fd48656d/raw/aaeb0b879647b1cf1dbfd461a2c4a8e292be738d/phpunit.xslt
           mkdir report
           php lib/convert_html.php
-          
 
       - name: Docker stop
         run: docker-compose stop
