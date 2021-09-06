@@ -15,5 +15,6 @@ $str = file_get_contents($env_file);
  
 $str = preg_replace('/GOOGLE_CLIENT_ID.*/', $rows[0], $str);
 $str = preg_replace('/GOOGLE_CLIENT_SECRET.*/', $rows[1], $str);
+$str = preg_replace('/GOOGLE_CALENDAR_API_KEY.*/', $rows[2], $str);
  
 file_put_contents($env_file, $str);
