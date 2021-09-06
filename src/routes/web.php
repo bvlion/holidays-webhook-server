@@ -1,14 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\GoogleLoginController;
 
 Route::get('/', function () {
-	return [
-		'datetime' => date('Y-m-d H:i:s T'),
-		'users' => User::all()
-	];
+  return [
+    'server' => date('Y-m-d H:i:s T'),
+    'db' => DB::select('SELECT NOW() AS time')[0]->time
+  ];
 });
 
 Route::get('/auth/redirect', [GoogleLoginController::class, 'redirectGoogleAuth']);

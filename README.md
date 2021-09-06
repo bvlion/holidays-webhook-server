@@ -18,6 +18,8 @@ holidays-webhook のサーバーサイド
 基本的に Docker の PHP を使うためローカルの PHP のバージョン変更は不要
 
 ```
+cp .env src/.
+cd src && docker run --rm --interactive --tty --volume $PWD:/app composer install && cd ..
 docker compose up --build -d web db
 ```
 
@@ -38,8 +40,11 @@ docker compose exec -T web php artisan test
 
 ### web
 
+- [index](/doc/web/index.md)
+- [google login](/doc/web/login.md)
+
 ### api
 
 ## テスト
 
-master にプッシュすると GitHub Actions によって[ GitHub Pages ](https://bvlion.github.io/holidays-webhook-server/index.html)にテスト結果がアップされる  
+master にプッシュすると GitHub Actions によって[ GitHub Pages ](https://bvlion.github.io/holidays-webhook-server/index.html)にテスト結果がアップされる

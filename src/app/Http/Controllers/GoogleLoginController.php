@@ -19,7 +19,12 @@ class GoogleLoginController extends Controller
   public function authGoogleCallback()
   {
     $google = Socialite::driver('google')->stateless()->user();
-    return $this->saveGroupsUser($google);
+    $user = $this->saveGroupsUser($google);
+    return [
+      'api_token' => $user->api_token,
+      'user_name' => $user->user_name,
+      'owner_flag' => $user->owner_flag
+    ];
   }
 
   public function apiLogin(Request $request)
@@ -54,6 +59,6 @@ class GoogleLoginController extends Controller
         'owner_flag' => true,
       ]);
     }
-    return ['user' => $user];
+    return $user;
   }
 }
