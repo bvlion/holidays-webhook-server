@@ -10,3 +10,4 @@ google_client_secret
 report
 src/result.xml
 lib/phpunit.xslt
+src/.env
