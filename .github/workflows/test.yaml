@@ -28,6 +28,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
+      - name: setup
+        run: cp .env src/.
+
       - name: cache vendor
         id: cache
         uses: actions/cache@v1
