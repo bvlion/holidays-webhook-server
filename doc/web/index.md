@@ -28,3 +28,28 @@ db | yyyy-MM-dd HH:mm:ss | DB 側の現在時刻
   "db":"2021-09-05 17:27:23"
 }
 ```
+
+## get /holiday/cache/clear
+
+祝日のキャッシュをクリアする
+
+### request
+
+内容 | 値 | 説明
+:--|:--|:--
+
+```
+http://localhost:8000/holiday/cache/clear
+```
+
+### response
+
+キャッシュデータ
+
+内容 | 値 | 説明
+:--|:--|:--
+holidays | \- | 祝日データ（クリアしているため空）
+
+```
+{"holidays":[]}
+```

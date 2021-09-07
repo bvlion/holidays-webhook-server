@@ -7,7 +7,13 @@ use App\Http\Controllers\GoogleLoginController;
 Route::get('/', function () {
   return [
     'server' => date('Y-m-d H:i:s T'),
-    'db' => DB::select('SELECT NOW() AS time')[0]->time
+    'db' => DB::select('SELECT NOW() AS time')[0]->time,
+  ];
+});
+
+Route::get('/holiday/cache/clear', function () {
+  return [
+    'holidays' => app()->make('HolidayList')->clear()
   ];
 });
 
