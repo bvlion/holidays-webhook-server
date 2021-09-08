@@ -12,6 +12,7 @@ CREATE TABLE time_triggers
     command_id INT NOT NULL COMMENT 'コマンド ID（マイナス値は端末の状態変更）',
     exec_notify TINYINT(1) NOT NULL COMMENT 'コマンド実行通知',
     timezone CHAR(6) NOT NULL DEFAULT '+09:00' COMMENT 'タイムゾーン（デフォルトは日本）',
+    country_code CHAR(2) NOT NULL DEFAULT 'jp' COMMENT '国コード',
     created_at DATETIME NOT NULL COMMENT '作成日時',
     updated_at DATETIME NOT NULL COMMENT '更新日時',
     deleted_at DATETIME COMMENT '削除日時',
