@@ -89,6 +89,7 @@ class TimeTrigger extends Command
           CAST(DATE_FORMAT(CONVERT_TZ(NOW(), '+09:00', tt.timezone), '%H:%i') AS TIME) BETWEEN tt.time_from AND tt.time_to
           -- 現在の対象タイムゾーンの分 - 開始時間の分 % インターバル == 0
         AND CAST(TIME_TO_SEC(DATE_FORMAT(CONVERT_TZ(NOW(), '+09:00', tt.timezone), '%H:%i')) / 60 - TIME_TO_SEC(tt.time_from) / 60 AS SIGNED) % tt.exec_interval = 0
+        AND tt.exec_flag = 1
         AND tt.deleted_at IS NULL
     ");
 
