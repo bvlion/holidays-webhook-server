@@ -15,7 +15,7 @@ class HolidayList
   {
     $key = $code . $year;
     if (array_key_exists($key, $this->_holidays)) {
-      return $this->_holidays[$code];
+      return $this->_holidays[$key];
     }
 
     $holidays_url = sprintf(
