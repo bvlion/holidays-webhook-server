@@ -1,4 +1,4 @@
-# ShareBookmarksApi
+# holidays-webhook-server
 
 holidays-webhook のサーバーサイド
 
