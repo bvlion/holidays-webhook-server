@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         Commands\UpdateHolidayCache::Class,
+        Commands\TimeTrigger::Class,
     ];
 
     /**
@@ -25,6 +26,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('holidays:update')->monthly();
+        $schedule->command('time:trigger')->everyMinute();
     }
 
     /**
