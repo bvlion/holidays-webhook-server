@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use GuzzleHttp\Client;
-use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Promise;
 use Psr\Http\Message\ResponseInterface;
 use GuzzleHttp\Exception\RequestException;
@@ -130,6 +129,7 @@ class TimeTrigger extends Command
         }
 
         // 実行
+        $options = [];
         $options['allow_redirects'] = true;
 
         $headers = json_decode($trigger->headers, true);
