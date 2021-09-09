@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Web\GoogleLoginController;
 
 Route::get('/', function () {
   return [
@@ -17,5 +16,5 @@ Route::get('/holiday/cache/clear', function () {
   ];
 });
 
-Route::get('/auth/redirect', [GoogleLoginController::class, 'redirectGoogleAuth']);
-Route::get('/login/callback', [GoogleLoginController::class, 'authGoogleCallback']);
+Route::get('/auth/redirect', 'GoogleLoginController@redirectGoogleAuth');
+Route::get('/login/callback', 'GoogleLoginController@authGoogleCallback');
