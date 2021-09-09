@@ -123,8 +123,8 @@ class TimeTrigger extends Command
         // 含めるパターン以外を除外
         if (!(
           ($trigger->holiday_decision == 'exec' && $is_holiday) || // 祝日を含める && 祝日
-          ($trigger->holiday_decision == 'not_exec' && !$is_holiday && array_key_exists($trigger->week, $target_weeks)) || // 祝日を含めない && !祝日 && 対象曜日
-          ($trigger->holiday_decision == 'not_check' && array_key_exists($trigger->week, $target_weeks)) // 祝日判定しない && 対象曜日
+          ($trigger->holiday_decision == 'not_exec' && !$is_holiday && in_array($trigger->week, $target_weeks, true)) || // 祝日を含めない && !祝日 && 対象曜日
+          ($trigger->holiday_decision == 'not_check' && in_array($trigger->week, $target_weeks, true)) // 祝日判定しない && 対象曜日
         )) {
           continue;
         }
