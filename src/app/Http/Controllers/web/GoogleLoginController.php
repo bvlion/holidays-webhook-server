@@ -38,7 +38,7 @@ class GoogleLoginController extends Controller
   private function saveGroupsUser(GoogleUser $google)
   {
     // Groups を更新
-    $group = Group::firstOrCreate([
+    $group = Group::updateOrCreate([
       'email' => $google->email
     ], [
       'token' => $google->token

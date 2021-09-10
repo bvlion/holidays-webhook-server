@@ -1,6 +1,8 @@
 <?php
 namespace App\Libs;
 
+use Illuminate\Support\Facades\Log;
+
 class HolidayList
 {
   private $_holidays = [];
@@ -36,6 +38,7 @@ class HolidayList
       ksort($holidays);   
     }
     $this->_holidays[$key] = $holidays;
+    Log::info('holidays', ['create' => $key]);
     return $holidays;
   }
 

@@ -10,4 +10,6 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 Route::group(['middleware' => 'auth:api'], function () {
   Route::post('/exec/command/{id}', 'CommandExecController@command');
   Route::post('/exec/summary/{id}', 'CommandExecController@summary');
+  Route::get('/calendar/holiday', 'CalendarController@isHoliday');
+  Route::post('/calendar/upsert', 'CalendarController@upsert');
 });

@@ -1,7 +1,7 @@
 CREATE TABLE calenders
 (
     id INT AUTO_INCREMENT NOT NULL COMMENT 'ID',
-    target_name VARCHAR(256) NOT NULL COMMENT '名称',
+    target_name VARCHAR(256) NOT NULL DEFAULT 'API SET' COMMENT '名称',
     target_id INT NOT NULL COMMENT 'グループ or ユーザー ID',
     target_type ENUM('group', 'user') NOT NULL COMMENT 'グループ or ユーザー',
     target_date DATE NOT NULL COMMENT '手動設定対象日',
