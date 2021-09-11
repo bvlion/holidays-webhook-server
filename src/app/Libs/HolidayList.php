@@ -5,11 +5,14 @@ use Illuminate\Support\Facades\Log;
 
 class HolidayList
 {
+  const HOLIDAYS_FILE = 'logs/holidays.json';
   private $_holidays = [];
 
   public function clear()
   {
+    Log::info('holidays', ['clear' => base_path(self::HOLIDAYS_FILE)]);
     $this->_holidays = [];
+    unlink(base_path(self::HOLIDAYS_FILE));
     return $this->_holidays;
   }
 
@@ -18,6 +21,14 @@ class HolidayList
     $key = $code . $year;
     if (array_key_exists($key, $this->_holidays)) {
       return $this->_holidays[$key];
+    }
+
+    if (file_exists(base_path(self::HOLIDAYS_FILE))) {
+      Log::info('holidays', ['read' => base_path(self::HOLIDAYS_FILE)]);
+      $this->_holidays = json_decode(file_get_contents(base_path(self::HOLIDAYS_FILE)), true);
+      if (array_key_exists($key, $this->_holidays)) {
+        return $this->_holidays[$key];
+      }
     }
 
     $holidays_url = sprintf(
@@ -39,6 +50,7 @@ class HolidayList
     }
     $this->_holidays[$key] = $holidays;
     Log::info('holidays', ['create' => $key]);
+    file_put_contents(base_path(self::HOLIDAYS_FILE), json_encode($this->_holidays, true));
     return $holidays;
   }
 
