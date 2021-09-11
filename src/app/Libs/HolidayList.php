@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Log;
 
 class HolidayList
 {
-  const HOLIDAYS_FILE = 'logs/holidays.json';
   private $_holidays = [];
 
   public function clear()
@@ -54,6 +53,7 @@ class HolidayList
     return $holidays;
   }
 
+  private const HOLIDAYS_FILE = 'logs/holidays.json';
   private const COUNTRY_CODES = [
     'is' => 'is',
     'az' => 'az',
