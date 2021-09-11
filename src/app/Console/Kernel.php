@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         Commands\UpdateHolidayCache::Class,
         Commands\TimeTrigger::Class,
+        Commands\DeleteOldExecResultCommand::Class,
     ];
 
     /**
@@ -27,6 +28,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('holidays:update')->monthly();
         $schedule->command('time:trigger')->everyMinute();
+        $schedule->command('results:delete')->hourly();
     }
 
     /**

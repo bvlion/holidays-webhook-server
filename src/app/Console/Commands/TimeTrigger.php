@@ -49,7 +49,8 @@ class TimeTrigger extends Command
     // 実行対象を取得
     $triggers = DB::select("
       SELECT 
-        c.id AS id,
+        c.id AS c_id,
+        tt.id AS t_id,
         tt.target_id AS target_id,
         tt.target_type AS target_type,
         tt.target_name AS trigger_name,
@@ -129,24 +130,23 @@ class TimeTrigger extends Command
         }
 
         // 実行
-        $options = [];
-        $options['allow_redirects'] = true;
+        yield function() use ($client, $trigger) {
+          $options = [];
+          $options['allow_redirects'] = true;
 
-        $headers = json_decode($trigger->headers, true);
-        if (!empty($headers)) {
-          $options['headers'] = $headers;
-        }
-
-        if (!empty($trigger->parameters)) {
-          $parameter = str_replace('##DATETIME##', date('Y-m-d H:i:s'), $trigger->parameters);
-          if ($trigger->body_type == 'json') {
-            $options[$trigger->body_type] = $parameter;
-          } else {
-            $options[$trigger->body_type] = json_decode($parameter, true);
+          $headers = json_decode($trigger->headers, true);
+          if (!empty($headers)) {
+            $options['headers'] = $headers;
           }
-        }
 
-        yield function() use ($client, $trigger, $options) {
+          if (!empty($trigger->parameters)) {
+            $parameter = str_replace('##DATETIME##', date('Y-m-d H:i:s'), $trigger->parameters);
+            if ($trigger->body_type == 'json') {
+              $options[$trigger->body_type] = $parameter;
+            } else {
+              $options[$trigger->body_type] = json_decode($parameter, true);
+            }
+          }
           $promise = $client->requestAsync($trigger->method, $trigger->url, $options);
           $promise->then(
             function(ResponseInterface $res) use ($trigger) {
@@ -170,7 +170,8 @@ class TimeTrigger extends Command
 
   private function saveResult($trigger, ResponseInterface $res) {
     ExecResult::create([
-      'command_id' => $trigger->id,
+      'command_id' => $trigger->c_id,
+      'trigger_id' => $trigger->t_id,
       'exec_time' => $trigger->exec_time,
       'response_code' => $res->getStatusCode(),
       'response_header' => json_encode($res->getHeaders(), true),
