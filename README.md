@@ -45,6 +45,9 @@ docker compose exec -T web php artisan test
 
 ### api
 
+- [calendar](/doc/api/calendar.md)
+- [exec](/doc/api/exec.md)
+
 ## テスト
 
 master にプッシュすると GitHub Actions によって[ GitHub Pages ](https://bvlion.github.io/holidays-webhook-server/index.html)にテスト結果がアップされる
