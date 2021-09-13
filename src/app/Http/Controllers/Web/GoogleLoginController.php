@@ -37,25 +37,19 @@ class GoogleLoginController extends Controller
 
   private function saveGroupsUser(GoogleUser $google)
   {
-    // Groups を更新
+    // groups を更新
     $group = Group::updateOrCreate([
       'email' => $google->email
     ], [
       'token' => $google->token
     ]);
 
-    // token
-    $token = Str::random(60);
-
-    // ユーザー更新
+    // users 登録
     $user = User::where('groups_id', $group->id)->where('owner_flag', true)->first();
-    if ($user) {
-      $user->api_token = $token;
-      $user->save();
-    } else {
+    if (!$user) {
       $user = User::create([
         'groups_id' => $group->id,
-        'api_token' => $token,
+        'api_token' => Str::random(60),
         'user_name' => $google->name,
         'owner_flag' => true,
       ]);
