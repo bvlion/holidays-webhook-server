@@ -36,7 +36,7 @@ class CalendarController extends Controller
     $force = false;
     $calandar = Calender::where('target_id', $target_id)->where('target_type', $type)->where('target_date', $date)->whereNull('deleted_at')->first();
     if ($calandar) {
-      $is_holiday = $calandar->is_holiday;
+      $is_holiday = $calandar->is_holiday == 1;
       $force = true;
     }
 
