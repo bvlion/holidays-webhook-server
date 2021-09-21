@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Calender;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
-class CalendarController extends Controller
+class CalendarController extends BaseApiController
 {
   public function isHoliday(Request $request)
   {

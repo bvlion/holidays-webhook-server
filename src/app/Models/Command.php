@@ -11,5 +11,5 @@ class Command extends Model
 
     protected $guarded = ['id'];
 
-    protected $hidden = ['created_at', 'updated_at', 'deleted_at'];
+    protected $hidden = ['target_id', 'deleted_at'];
 }

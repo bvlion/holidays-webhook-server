@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Psr\Http\Message\ResponseInterface;
@@ -12,7 +11,7 @@ use App\Models\Command;
 use App\Models\SummarizeCommand;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
-class CommandExecController extends Controller
+class CommandExecController extends BaseApiController
 {
   public function command(Request $request, int $id)
   {
@@ -25,7 +24,8 @@ class CommandExecController extends Controller
     $this->checkExecutableUser(
       $command->target_type,
       $command->target_id,
-      $request->user()
+      $request->user(),
+      'execute'
     );
 
     return $this->exec([$command]);
@@ -42,7 +42,8 @@ class CommandExecController extends Controller
     $this->checkExecutableUser(
       $summarize_command->target_type,
       $summarize_command->target_id,
-      $request->user()
+      $request->user(),
+      'execute'
     );
 
     return $this->exec(
@@ -50,17 +51,6 @@ class CommandExecController extends Controller
         'id', json_decode($summarize_command->commands, true)
       )->get()->all()
     );
-  }
-
-  private function checkExecutableUser(string $target_type, int $target_id, User $user)
-  {
-    if (
-      ($target_type == 'user' && $target_id == $user->id) ||
-      ($target_type == 'group' && $target_id == $user->groups_id)
-    ) {
-      return;
-    }
-    throw new HttpException(403, 'Haven\'t execute permission');
   }
 
   private function exec(array $commands)

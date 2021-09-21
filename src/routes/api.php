@@ -8,4 +8,7 @@ Route::group(['middleware' => 'auth:api'], function () {
   Route::post('/exec/summary/{id}', 'CommandExecController@summary');
   Route::get('/calendar/holiday', 'CalendarController@isHoliday');
   Route::post('/calendar/upsert', 'CalendarController@upsert');
+
+  Route::resource('commands', 'CommandsController', ['except' => ['show', 'create', 'edit']]);
+
 });
