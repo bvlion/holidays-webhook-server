@@ -2,13 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
-use GuzzleHttp\Client;
 use Illuminate\Http\Request;
-use Psr\Http\Message\ResponseInterface;
-use GuzzleHttp\Exception\RequestException;
-use App\Models\User;
 use App\Models\Command;
-use App\Models\SummarizeCommand;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use App\Http\Requests\CommandRequest;
 
