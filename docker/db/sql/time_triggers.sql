@@ -9,7 +9,7 @@ CREATE TABLE time_triggers
     exec_interval INT NOT NULL DEFAULT 1 COMMENT '実行間隔',
     target_week VARCHAR(128) NOT NULL COMMENT '対象曜日（json 形式）',
     holiday_decision ENUM('not_check', 'exec', 'not_exec') NOT NULL COMMENT '祝日判定（チェックなし・実行する・実行しない）',
-    command_id INT NOT NULL COMMENT 'コマンド ID（マイナス値は端末の状態変更）',
+    command_id INT NOT NULL COMMENT 'コマンド ID（{-1:マナー解除, -2:マナーモード, -3:サイレント}）',
     exec_notify TINYINT(1) NOT NULL COMMENT 'コマンド実行通知',
     timezone CHAR(6) NOT NULL DEFAULT '+09:00' COMMENT 'タイムゾーン（デフォルトは日本）',
     country_code CHAR(2) NOT NULL DEFAULT 'jp' COMMENT '国コード',

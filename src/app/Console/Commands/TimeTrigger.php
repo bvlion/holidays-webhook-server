@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use GuzzleHttp\Client;
-use GuzzleHttp\Promise;
 use Psr\Http\Message\ResponseInterface;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Pool;
@@ -54,7 +53,12 @@ class TimeTrigger extends Command
         tt.target_id AS target_id,
         tt.target_type AS target_type,
         tt.target_name AS trigger_name,
-        c.target_name AS command_name,
+        CASE c.id
+          WHEN -1 THEN 'マナー解除'
+          WHEN -2 THEN 'マナーモード'
+          WHEN -3 THEN 'サイレント'
+          ELSE c.target_name
+        END AS command_name
         target_week,
         holiday_decision,
         exec_notify,
@@ -70,7 +74,7 @@ class TimeTrigger extends Command
         ones.id AS skip_id
       FROM
         time_triggers tt
-        INNER JOIN commands c
+        LEFT OUTER JOIN commands c
           ON tt.command_id = c.id
          AND c.deleted_at IS NULL
         -- 個人の祝日を無し想定で JOIN
@@ -93,6 +97,21 @@ class TimeTrigger extends Command
         AND tt.deleted_at IS NULL
     ");
 
+    foreach ($triggers as $trigger) {
+      if ($trigger->c_id > 0) {
+        continue;
+      }
+
+      $fcm_users = []; // FCM でサイレントとかにする TODO
+      if ($trigger->target_type == 'group') {
+        $fcm_users = User::where('groups_id', $trigger->target_id)->whereNotNull('fcm_token')->get();
+      } else {
+        $fcm_users = User::where('id', $trigger->target_id)->whereNotNull('fcm_token')->get();
+      }
+
+      unset($trigger);
+    }
+
     if (empty($triggers)) {
       return;
     }
@@ -100,7 +119,7 @@ class TimeTrigger extends Command
     $client = new Client();
 
     $requests = function() use ($client, $triggers) {
-      foreach ($triggers as $key => $trigger) {
+      foreach ($triggers as $trigger) {
         // スキップ対象であれば飛ばす
         if ($trigger->skip_id !== null) {
           $skip = OnetimeSkip::find($trigger->skip_id);
@@ -160,7 +179,6 @@ class TimeTrigger extends Command
           return $promise;
         };
       }
-
     };
 
     $pool = new Pool($client, $requests());
