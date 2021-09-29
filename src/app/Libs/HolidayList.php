@@ -23,7 +23,6 @@ class HolidayList
     }
 
     if (file_exists(base_path(self::HOLIDAYS_FILE))) {
-      Log::info('holidays', ['read' => base_path(self::HOLIDAYS_FILE)]);
       $this->_holidays = json_decode(file_get_contents(base_path(self::HOLIDAYS_FILE)), true);
       if (array_key_exists($key, $this->_holidays)) {
         return $this->_holidays[$key];
