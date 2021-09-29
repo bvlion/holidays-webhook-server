@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['middleware' => 'auth:api'], function () {
@@ -12,6 +11,9 @@ Route::group(['middleware' => 'auth:api'], function () {
 
   Route::get('/exec/result/{id}', 'ExecResultsController@results');
 
-  Route::resource('commands', 'CommandsController', ['except' => ['show', 'create', 'edit']]);
+  Route::resource('/commands', 'CommandsController', ['except' => ['show', 'create', 'edit']]);
+  
+  Route::resource('/onetime/skip', 'OnetimeSkipsController', ['except' => ['show', 'create', 'edit', 'update', 'destroy']]);
+  Route::delete('/onetime/skip', 'OnetimeSkipsController@destroy');
 
 });
