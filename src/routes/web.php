@@ -18,3 +18,6 @@ Route::get('/holiday/cache/clear', function () {
 
 Route::get('/auth/redirect', 'GoogleLoginController@redirectGoogleAuth');
 Route::get('/login/callback', 'GoogleLoginController@authGoogleCallback');
+
+Route::get('/doc', 'RedocController@index');
+Route::get('/openapi.yml', 'RedocController@yaml');
