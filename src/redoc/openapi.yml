@@ -1,35 +1,51 @@
 swagger: "2.0"
 info:
-  description: "これはペットストアに関するAPIです。"
-  version: "1.0.0"
-  title: "Petstore API"
-  termsOfService: "http://swagger.io/terms/"
+  description: "Holidays Webhook の API です。"
+  version: "0.1.1"
+  title: "Holidays Webhook API"
   contact:
-    email: "apiteam@swagger.io"
-  license:
-    name: "Apache 2.0"
-    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+    email: "info@ambitiuos-i.net"
+servers:
+  - url: 'https://holidays-webhook.ambitious-i.net/'
+    description: Production
+  - url: 'http://localhost:8000'
+    description: Local
 paths:
-  /pet/{petId}:
+
+  /:
     get:
-      summary: "ペット情報API"
-      description: "指定されたpetIdの情報を返します"
-      parameters:
-      - name: "petId"
-        in: "path"
-        description: "取得したいペットのID"
-        required: true
-        type: "integer"
-        format: "int64"
+      summary: "index"
+      description: "現在時刻を返す（DB 側とサーバー側）"
       responses:
         200:
-          description: "成功時のレスポンス"
-          schema:
-            type: "object"
-            properties:
-              id:
-                type: "integer"
-                format: "int64"
-              name:
-                type: "string"
-                example: "doggie"
+          description: "レスポンス"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  server:
+                    type: string
+                    format: date-time
+                    example: 2021-09-05 08:27:23 UTC
+                    description: サーバー側の現在時刻
+                  db:
+                    type: string
+                    format: date-time
+                    example: 2021-09-05 17:27:23
+                    description: DB 側の現在時刻
+  /holiday/cache/clear:
+    get:
+      summary: "cache clear"
+      description: "祝日のキャッシュをクリアする"
+      responses:
+        200:
+          description: "レスポンス"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  holidays:
+                    type: array
+                    description: 祝日データ（クリアしているため空）
