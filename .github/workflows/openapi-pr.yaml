@@ -28,7 +28,7 @@ jobs:
             [1]: https://github.com/peter-evans/create-pull-request
           branch: feature/openapi
           base: main
-          delete-branch: true
+          delete-branch: false
           assignees: bvlion
           draft: false
       
