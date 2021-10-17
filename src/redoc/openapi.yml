@@ -1,19 +1,75 @@
-swagger: "2.0"
+openapi: 3.0.3
 info:
   description: "Holidays Webhook の API です。"
-  version: "0.1.1"
+  version: 1.0.0-oas3
   title: "Holidays Webhook API"
   contact:
     email: "info@ambitiuos-i.net"
+    name: bvlion
+    url: https://bvlion-app.web.app
 servers:
   - url: 'https://holidays-webhook.ambitious-i.net/'
     description: Production
   - url: 'http://localhost:8000'
     description: Local
-paths:
 
+tags:
+  - name: web
+    description: 認証なしで接続可能
+  - name: api
+    description: Bearer 認証が必要な API
+
+components:
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Not date pattern
+                description: パラメータ不正
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Authentication Required!
+                description: 認証情報不正
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Haven't read permission
+                description: アクセス不可（パラメータ含む）
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    user-type:
+      type: string
+      enum:
+        - user
+        - group
+
+paths:
   /:
     get:
+      tags:
+        - web
       summary: "index"
       description: "現在時刻を返す（DB 側とサーバー側）"
       responses:
@@ -36,6 +92,8 @@ paths:
                     description: DB 側の現在時刻
   /holiday/cache/clear:
     get:
+      tags:
+        - web
       summary: "cache clear"
       description: "祝日のキャッシュをクリアする"
       responses:
@@ -47,11 +105,15 @@ paths:
                 type: object
                 properties:
                   holidays:
+                    items:
+                      type: object
                     type: array
                     description: 祝日データ（クリアしているため空）
 
   /auth/redirect:
     get:
+      tags:
+        - web
       summary: "google login"
       description: "Google の Login 画面へリダイレクトさせる"
       responses:
@@ -59,10 +121,13 @@ paths:
           description: "Google のアカウント選択へリダイレクト"
           headers:
             Location:
-              type: string
-              example: https://accounts.google.com/o/oauth2/auth/oauthchooseaccount
+              schema:
+                type: string
+                example: https://accounts.google.com/o/oauth2/auth/oauthchooseaccount
   /login/callback:
     get:
+      tags:
+        - web
       summary: "google callback"
       description: "Google Auth リダイレクトからの情報を取得・登録する"
       responses:
@@ -85,3 +150,45 @@ paths:
                     type: boolean
                     example: true
                     description: グループのオーナーか（Google ログインの場合は常に true）
+
+  /api/exec/command/{id}:
+    post:
+      tags:
+        - api
+      summary: "exec command"
+      description: "コマンドを実行する"
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            example: 1
+          required: true
+          description: コマンド番号
+
+      responses:
+        200:
+          description: "レスポンス"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  server:
+                    type: string
+                    format: date-time
+                    example: 2021-09-05 08:27:23 UTC
+                    description: サーバー側の現在時刻
+                  db:
+                    type: string
+                    format: date-time
+                    example: 2021-09-05 17:27:23
+                    description: DB 側の現在時刻
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
