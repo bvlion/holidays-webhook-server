@@ -18,7 +18,7 @@ servers:
 
 tags:
   - name: web
-    description: 認証なしで接続可能
+    description: 認証なしで接続可能な API
   - name: api
     description: Bearer 認証が必要な API
 
