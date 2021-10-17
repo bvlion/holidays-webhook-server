@@ -1,13 +1,16 @@
 openapi: 3.0.3
 info:
   description: "Holidays Webhook の API です。"
-  version: 1.0.0-oas3
+  version: 0.1.3
   title: "Holidays Webhook API"
   contact:
     email: "info@ambitiuos-i.net"
     name: bvlion
     url: https://bvlion-app.web.app
 servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/bvlion/holidays-webhook/0.1.3
   - url: 'https://holidays-webhook.ambitious-i.net/'
     description: Production
   - url: 'http://localhost:8000'
@@ -170,22 +173,28 @@ paths:
 
       responses:
         200:
-          description: "レスポンス"
+          description: "コマンド実行結果"
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  server:
+                  name:
                     type: string
-                    format: date-time
-                    example: 2021-09-05 08:27:23 UTC
-                    description: サーバー側の現在時刻
-                  db:
+                    example: 電気
+                    description: 実行コマンド名
+                  response_code:
+                    type: integer
+                    example: 200
+                    description: 実行コマンドのレスポンスコード
+                  response_header:
                     type: string
-                    format: date-time
-                    example: 2021-09-05 17:27:23
-                    description: DB 側の現在時刻
+                    example: "{\"Date\":[\"Mon, 13 Sep 2021...."
+                    description: 実行コマンドのレスポンスヘッダ
+                  response_body:
+                    type: string
+                    example: "{}"
+                    description: 実行コマンドのレスポンスボディ
         400:
           $ref: '#/components/responses/BadRequest'
         401:
