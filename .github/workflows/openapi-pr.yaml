@@ -9,11 +9,9 @@ jobs:
   create-pull-request-and-merge:
     runs-on: ubuntu-latest
 
+    steps:
       - name: checkout
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          ref: feature/openapi
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
