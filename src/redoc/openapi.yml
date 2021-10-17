@@ -49,3 +49,39 @@ paths:
                   holidays:
                     type: array
                     description: 祝日データ（クリアしているため空）
+
+  /auth/redirect:
+    get:
+      summary: "google login"
+      description: "Google の Login 画面へリダイレクトさせる"
+      responses:
+        302:
+          description: "Google のアカウント選択へリダイレクト"
+          headers:
+            Location:
+              type: string
+              example: https://accounts.google.com/o/oauth2/auth/oauthchooseaccount
+  /login/callback:
+    get:
+      summary: "google callback"
+      description: "Google Auth リダイレクトからの情報を取得・登録する"
+      responses:
+        200:
+          description: "レスポンス"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api_token:
+                    type: string
+                    example: CuTtoRdf2lZZfkAUcp2hYrj0MjPqYxxxxxxxxxx
+                    description: 認証トークン（60 桁乱数）
+                  user_name:
+                    type: string
+                    example: bvlion
+                    description: Google に登録しているユーザー名
+                  owner_flag:
+                    type: boolean
+                    example: true
+                    description: グループのオーナーか（Google ログインの場合は常に true）
