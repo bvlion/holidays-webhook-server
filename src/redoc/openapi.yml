@@ -6,7 +6,7 @@ info:
     name: bvlion
     url: https://bvlion-app.web.app
     email: info@ambitiuos-i.net
-  version: 1.0.0
+  version: 0.2.0
 servers:
 - url: https://virtserver.swaggerhub.com/bvlion/holidays-webhook/1.0.0
   description: SwaggerHub API Auto Mocking
@@ -197,7 +197,7 @@ components:
       properties:
         error:
           type: string
-          description: "アクセス不可[パラメータ含む]"
+          description: アクセス不可（パラメータ含む）
           example: Haven't read permission
   responses:
     BadRequest:
