@@ -8,8 +8,6 @@ info:
     email: info@ambitiuos-i.net
   version: 0.2.0
 servers:
-- url: https://virtserver.swaggerhub.com/bvlion/holidays-webhook/1.0.0
-  description: SwaggerHub API Auto Mocking
 - url: https://holidays-webhook.ambitious-i.net/
   description: Production
 - url: http://localhost:8000/
