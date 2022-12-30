@@ -40,8 +40,9 @@ docker compose exec -T web php artisan test
 
 ### web
 
-- [index](/doc/web/index.md)
-- [google login](/doc/web/login.md)
+- [redoc](/src/redoc)
+  - Docker を立ち上げ [/doc](http://localhost:8000/doc) にアクセスする
+  - 本番も同等
 
 ### api
 
