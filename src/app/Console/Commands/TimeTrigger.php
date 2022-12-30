@@ -58,7 +58,7 @@ class TimeTrigger extends Command
           WHEN -2 THEN 'マナーモード'
           WHEN -3 THEN 'サイレント'
           ELSE c.target_name
-        END AS command_name
+        END AS command_name,
         target_week,
         holiday_decision,
         exec_notify,
