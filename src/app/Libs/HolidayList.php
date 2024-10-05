@@ -32,7 +32,7 @@ class HolidayList
     $holidays_url = sprintf(
       'https://www.googleapis.com/calendar/v3/calendars/%s/events?'.
       'key=%s&timeMin=%s&timeMax=%s&orderBy=startTime&singleEvents=true',
-      self::COUNTRY_CODES[$code] . '__ja@holiday.calendar.google.com',
+      'ja.' . self::COUNTRY_CODES[$code] . '.official%23holiday@group.v.calendar.google.com',
       env('GOOGLE_CALENDAR_API_KEY'),
       $year . '-01-01T00%3A00%3A00.000Z',
       $year . '-12-31T00%3A00%3A00.000Z'
