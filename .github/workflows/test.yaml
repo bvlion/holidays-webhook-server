@@ -20,11 +20,11 @@ jobs:
     steps:
       - name: checkout
         if: ${{ github.event_name != 'pull_request_target' }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         
       - name: Checkout PR
         if: ${{ github.event_name == 'pull_request_target' }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -33,7 +33,7 @@ jobs:
 
       - name: cache vendor
         id: cache
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: ./src/vendor
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -48,30 +48,29 @@ jobs:
           cd ..
 
       - name: docker start
-        run: docker-compose up --build -d web db
+        run: docker compose up --build -d web db
 
       - name: wait start db
-        run: docker-compose up --build db-check
+        run: docker compose up --build db-check
 
       - name: test data insert
-        run: docker-compose exec -T web php artisan db:seed
+        run: docker compose exec -T web php artisan db:seed
 
       - name: test
         run: |
-          docker-compose exec -T web php artisan test --log-junit result.xml
+          docker compose exec -T web php artisan test --log-junit result.xml
           curl -o lib/phpunit.xslt https://gist.githubusercontent.com/jrfnl/3c28ea6d9b07fd48656d/raw/aaeb0b879647b1cf1dbfd461a2c4a8e292be738d/phpunit.xslt
           mkdir report
           php lib/convert_html.php
 
       - name: Docker stop
-        run: docker-compose stop
+        run: docker compose stop
 
       - name: upload test report
-        uses: JamesIves/github-pages-deploy-action@4.0.0
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: report
-          uses: actions/upload-artifact@v2
 
       - name: slack notification
         uses: 8398a7/action-slack@v3
