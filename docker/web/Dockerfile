@@ -1,4 +1,8 @@
-FROM php:8.2-apache
+FROM composer:2.8.12 AS composer
+
+FROM php:8.2.30-apache
+
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 
 RUN apt-get update && apt-get install -y git zip unzip libzip-dev
 
