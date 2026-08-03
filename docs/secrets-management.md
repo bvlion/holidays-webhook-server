@@ -18,7 +18,7 @@
 - 実値を含む `.env`、秘密鍵、認証JSON、トークンをGitへ追加しない。
 - 新規開発者と継続的インテグレーションは、公開用 `.env.example` から `src/.env` を作成する。
 - `.env.example` の `APP_KEY` とデータベース認証情報はローカル・テスト専用の公開値とし、本番で再利用しない。
-- 秘密情報をIssue、Pull Request、Slack、コマンド出力、テスト結果へ貼り付けない。
+- 秘密情報をIssue、Pull Request、Slack、ログ、コマンド出力、テスト結果、コミットメッセージへ貼り付けない。
 - ログへAuthorizationヘッダー、Cookie、URLクエリ、リクエスト本文、外部レスポンスの実値を出力しない。
 - 漏洩が疑われる値は、Gitからの削除だけで安全になったと判断せず、提供元で失効・再発行する。
 
@@ -38,9 +38,9 @@ Google連携が必要な場合は、管理者から安全な経路で受け取�
 
 ### 3.2 継続的インテグレーション
 
-Pull Request用ワークフローは `.env.example` を `src/.env` へコピーする。現在のテストはGoogle、Slack、SSHの秘密情報を必要としない。Dependabotを含めて標準の `pull_request` イベントでテストし、Pull RequestのコードをSecretへアクセスできる `pull_request_target` では実行しない。
+Pull Request用ワークフローは `.env.example` を `src/.env` へコピーする。現在のテストはGoogle、Slack、SSHの秘密情報を必要としない。Dependabotを含めて標準の `pull_request` イベントでテストし、Pull RequestのコードをSecretへアクセスできる `pull_request_target` では実行しない。テストjobの権限はリポジトリ内容の読み取りだけとする。
 
-Slack通知は `SLACK_WEBHOOK_URL` をGitHub Actions Secretから受け取る。通知対象はmainへのpushと、同一リポジトリ内のDependabot以外のPull Requestに限定する。テストレポートの公開はmainへのpushだけで行う。Secretや書き込み権限が利用できないPull Requestでも、アプリケーションテスト自体がそれらへ依存しない構成を維持する。
+Slack通知は `SLACK_WEBHOOK_URL` をGitHub Actions Secretから受け取り、mainへのpushだけで実行する。テストレポートの公開もmainへのpushだけで行い、公開jobだけにリポジトリ内容の書き込み権限を与える。Pull Requestでは、秘密情報と書き込み権限を使用せずテストだけを実行する。
 
 ### 3.3 本番
 
@@ -119,7 +119,7 @@ GitleaksがLaravelの `APP_KEY` を検出対象にしないため、`.env`、`sr
 
 ## 7. 人間による失効・再発行チェックリスト
 
-Git履歴に残る2種類の `APP_KEY` は公開済みとして扱う。値そのものをIssueやPull Requestへ転記せず、安全な環境で次を実施する。
+Git履歴に残る2種類の `APP_KEY` は公開済みとして扱う。値そのものをIssue、Pull Request、ログ、コミットメッセージへ転記せず、安全な環境で次を実施する。本番キーとの照合は人間による作業であり、このPull Requestでは照合、Git履歴の書き換え、本番キーの変更、秘密情報の失効・再発行を実施しない。
 
 - [ ] 本番XServerの `APP_KEY` が、Git履歴に残る2種類のいずれかと一致するか確認する
 - [ ] 一致する場合は、保守時間を確保して新しい `APP_KEY` を生成し、本番 `.env` を更新する
@@ -132,7 +132,13 @@ Git履歴に残る2種類の `APP_KEY` は公開済みとして扱う。値そ�
 - [ ] 露出が確認されたActions Secretは提供元で失効・再発行し、GitHubの登録値を更新する
 - [ ] 必要な場合は、関係者と履歴書き換えおよび全cloneの再取得手順を調整する
 
-## 8. 確認手順
+## 8. Issue #209を閉じる条件
+
+Issue #209は、このPull Requestのマージだけでは閉じない。運用者が安全な環境で本番XServerの `APP_KEY` とGit履歴上の2種類を照合し、値を一切記録せず、一致または不一致という照合結果だけをIssue #209で確認できる状態になってから閉じる。
+
+照合結果が一致の場合に必要となる本番キーの変更、影響確認、秘密情報の失効・再発行、Git履歴の書き換えは、このPull Requestの対象外とする。実施要否と手順は、照合結果に基づいて運用者が別途判断する。
+
+## 9. 確認手順
 
 秘密情報を検索する際は、必ず検出値を完全にマスクする。検索結果にはファイル名、コミット、キー名だけを残し、値を標準出力やレポートへ含めない。
 

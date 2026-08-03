@@ -8,6 +8,9 @@ on:
     branches:
       - 'main'
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -53,18 +56,45 @@ jobs:
       - name: Docker stop
         run: docker compose stop
 
-      - name: upload test report
+      - name: store test report
         if: ${{ github.event_name == 'push' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: report
+
+  publish-test-report:
+    if: ${{ github.event_name == 'push' }}
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: download test report
+        uses: actions/download-artifact@v4
+        with:
+          name: test-report
+          path: report
+
+      - name: publish test report
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: report
 
+  notify:
+    if: ${{ always() && github.event_name == 'push' }}
+    needs:
+      - test
+      - publish-test-report
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
       - name: slack notification
         uses: 8398a7/action-slack@v3
-        if: ${{ always() && (github.event_name == 'push' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)) }}
         with:
-          status: ${{ job.status }}
+          status: ${{ contains(needs.*.result, 'failure') && 'failure' || contains(needs.*.result, 'cancelled') && 'cancelled' || 'success' }}
           fields: repo,message,action,took
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

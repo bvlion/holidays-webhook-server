@@ -89,8 +89,10 @@ Dependabotを含めて通常のpull requestを使い、Pull Requestのコード�
 7. PHPUnitを実行してJUnit XMLを作る。
 8. 外部URLからXSLTをダウンロードし、HTMLレポートへ変換する。
 9. Docker Composeサービスを停止する。
-10. mainへのpushでは、レポートを `gh-pages` ブランチへ配置する。
-11. mainへのpushと、同一リポジトリ内のDependabot以外のPull Requestでは、Slackへ結果を通知する。
+10. mainへのpushでは、テストレポートをartifactで公開jobへ渡し、`gh-pages` ブランチへ配置する。
+11. mainへのpushでは、テストとレポート公開の結果をSlackへ通知する。
+
+Pull Requestで実行するテストjobはリポジトリ内容の読み取り権限だけを持ち、Secretを使用しない。`gh-pages` への書き込み権限はmainへのpushでだけ実行する公開jobに限定する。
 
 READMEには「masterにプッシュ」と記載されているが、実際のワークフロー対象は `main` である。
 
