@@ -18,10 +18,12 @@ holidays-webhook のサーバーサイド
 基本的に Docker の PHP を使うためローカルの PHP のバージョン変更は不要
 
 ```
-cp .env src/.
+cp .env.example src/.env
 cd src && docker run --rm --interactive --tty --volume $PWD:/app composer install && cd ..
 docker compose up --build -d web db
 ```
+
+`.env.example` の値はローカル開発・テスト専用であり、本番環境では使用しない。
 
 ### テスト
 
