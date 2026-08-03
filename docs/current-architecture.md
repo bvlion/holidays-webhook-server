@@ -51,7 +51,7 @@
 
 | サービス | 構成 | 役割 |
 | --- | --- | --- |
-| `web` | PHP 8.2 + Apache | LaravelのWeb/APIおよびArtisanコマンドを実行する |
+| `web` | PHP 8.2.30 + Apache | LaravelのWeb/APIおよびArtisanコマンドを実行する |
 | `db` | MySQL Server 5.7.35 | アプリケーションデータを保持する |
 
 `db-check` はMySQLの起動確認用であり、常駐アプリケーションではない。詳細なローカルと本番の差異は `current-operations.md` に記載する。

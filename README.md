@@ -10,25 +10,64 @@ holidays-webhook のサーバーサイド
 
 ### インストール
 
-- VSCode
-- Docker for Mac
+- Docker DesktopまたはDocker Engine
+- Docker Compose v2
+- Make
 
-### 実行
+ローカル環境では、Docker内のPHP 8.2.30、Composer 2.8.12、MySQL 5.7.35を使用する。ホスト側にPHPやComposerをインストールする必要はない。
 
-基本的に Docker の PHP を使うためローカルの PHP のバージョン変更は不要
+### 初回起動
 
+```shell
+make setup
 ```
-cp .env.example src/.env
-cd src && docker run --rm --interactive --tty --volume $PWD:/app composer install && cd ..
-docker compose up --build -d web db
+
+このコマンドは、次を順番に実行する。
+
+1. `src/.env` がない場合だけ、`.env.example` から作成する。
+2. Dockerイメージをビルドする。
+3. WebコンテナのPHPと固定版Composerで依存関係を導入する。
+4. Webサーバーとデータベースを起動し、データベースの応答を待つ。
+5. 初回のMySQLコンテナ作成時に `docker/db/sql` のテーブル定義を適用し、データベースシーダーを実行する。現在のシーダーはデータを投入しない。
+
+`.env.example` の値はローカル開発・テスト専用であり、本番環境では使用しない。Google連携を使用しない起動とテストに外部の秘密情報は不要である。
+
+`make setup` は再実行できる。既存の `src/.env` を上書きせず、既存のデータベースコンテナを再利用する。
+
+### 通常起動
+
+```shell
+make up
 ```
 
-`.env.example` の値はローカル開発・テスト専用であり、本番環境では使用しない。
+既存のWebサーバーとデータベースを起動し、データベースの応答を待つ。
+
+### 停止
+
+```shell
+make stop
+```
+
+コンテナを削除せずに停止するため、ローカルデータベースの内容は保持される。現在のデータベースはコンテナ内にデータを保持するため、データを残す必要がある場合は `docker compose down` を使用しない。
+
+### Webイメージの再構築
+
+```shell
+make rebuild
+```
+
+Webイメージだけをキャッシュなしで再構築する。データベースコンテナは再作成しない。
 
 ### テスト
 
+```shell
+make test
 ```
-docker compose exec -T web php artisan test
+
+環境構築からPHP・Composer・必要なPHP拡張・テストまでをまとめて確認する場合は、次を実行する。
+
+```shell
+make check
 ```
 
 ### ローカルで Google 認証
@@ -53,4 +92,4 @@ docker compose exec -T web php artisan test
 
 ## テスト
 
-master にプッシュすると GitHub Actions によって[ GitHub Pages ](https://bvlion.github.io/holidays-webhook-server/index.html)にテスト結果がアップされる
+mainにプッシュするとGitHub Actionsによって[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)にテスト結果がアップされる。GitHub ActionsのPHP・Composer環境固定はIssue #211で扱う。

@@ -42,11 +42,15 @@ WebコンテナはXdebugを常時有効化し、`host.docker.internal:9003` を�
 
 ### 2.3 初期構築
 
-READMEに記載された流れは次のとおりである。
+READMEに記載された初回構築は `make setup` の1コマンドで、処理の流れは次のとおりである。
 
-1. ルートの `.env.example` を `src/.env` へコピーする。
-2. Composer公式コンテナで `composer install` を実行する。
-3. Docker Composeで `web` と `db` をビルドして起動する。
+1. `src/.env` が存在しない場合だけ、ルートの `.env.example` から作成する。
+2. Docker Composeでローカル用イメージをビルドする。
+3. Webイメージ内のPHP 8.2.30とComposer 2.8.12で `composer install` を実行する。
+4. `web` と `db` を起動し、`db-check` でMySQLの応答を待つ。
+5. 初回のMySQLコンテナ作成時にSQLを適用し、空のDatabaseSeederを実行する。
+
+通常起動、停止、Webイメージ再構築、テスト、総合検証は、それぞれ `make up`、`make stop`、`make rebuild`、`make test`、`make check` で実行する。停止はコンテナを削除せず、再構築はデータベースコンテナを対象にしない。
 
 Google認証をローカルで使用する場合は、管理者から受け取った `lib/google_client_secret` を `lib/google_client_export.php` で `src/.env` へ反映する手順になっている。
 
@@ -164,7 +168,7 @@ rsyncでは次を転送対象から除外する。
 リポジトリ上の条件は次のとおりである。
 
 - `composer.json`: PHP `^7.3|^8.0`
-- ローカルDocker: PHP 8.2 + Apache
+- ローカルDocker: PHP 8.2.30 + Apache
 - `composer.lock`: Laravel Framework 8.83.29
 
 リポジトリ上の条件も、公開経路から本番のPHPバージョンと実行方式を証明するものではない。
@@ -203,7 +207,7 @@ Laravel側には、毎分、毎時、毎月のスケジュール定義がある�
 | 項目 | ローカル | 本番で確認できた範囲 |
 | --- | --- | --- |
 | Webサーバー | Apache | 公開応答はnginx |
-| PHP | Dockerの8.2 | 運用者確認ではXServerの8.2.30。公開経路からバージョンとServer APIは独立確認できない |
+| PHP | Dockerの8.2.30 | 運用者確認ではXServerの8.2.30。公開経路からバージョンとServer APIは独立確認できない |
 | データベース | MySQL Server 5.7.35 | `SELECT NOW()` の成功のみ確認、製品とバージョンは未確認 |
 | アプリケーション配置 | `src` をコンテナへバインドマウント | GitHub ActionsからSSHとrsyncで `src` の内容を転送 |
 | `.env` | 公開用 `.env.example` から、Git管理外の `src/.env` を作成 | 配備対象外で、サーバー側の既存ファイルを利用 |
