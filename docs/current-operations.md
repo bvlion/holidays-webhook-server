@@ -29,7 +29,7 @@
 | Web公開ポート | ホスト8000番からコンテナ80番 | `docker-compose.yml` |
 | MySQL公開ポート | ホスト3346番からコンテナ3306番 | `docker-compose.yml` |
 
-WebコンテナはXdebugを常時有効化し、`host.docker.internal:9003` を接続先としている。MySQLはgeneral logを有効化している。
+WebコンテナはXdebugを常時有効化し、`host.docker.internal:9003` を接続先としている。MySQLのgeneral logは、SQLに含まれる認証情報等を記録しないよう無効化している。
 
 ### 2.2 ファイルのマウント
 
@@ -44,7 +44,7 @@ WebコンテナはXdebugを常時有効化し、`host.docker.internal:9003` を�
 
 READMEに記載された流れは次のとおりである。
 
-1. ルートの `.env` を `src/.env` へコピーする。
+1. ルートの `.env.example` を `src/.env` へコピーする。
 2. Composer公式コンテナで `composer install` を実行する。
 3. Docker Composeで `web` と `db` をビルドして起動する。
 
@@ -77,12 +77,11 @@ Featureテストはデータベース時刻を取得するため、実行時にM
 
 - `main` へのpush
 - `main` 向けpull request
-- `main` 向け `pull_request_target`
 
-Dependabotでは `pull_request_target`、それ以外では通常のpushまたはpull requestを使う条件分岐がある。処理内容は次のとおりである。
+Dependabotを含めて通常のpull requestを使い、Pull RequestのコードをSecretへアクセスできる `pull_request_target` では実行しない。処理内容は次のとおりである。
 
 1. 対象コミットをチェックアウトする。
-2. ルートの `.env` を `src/.env` へコピーする。
+2. ルートの `.env.example` を `src/.env` へコピーする。
 3. Composer依存関係をキャッシュし、未取得時はComposerコンテナでインストールする。
 4. `web` と `db` をビルドして起動する。
 5. `db-check` でMySQLの起動を待つ。
@@ -90,8 +89,10 @@ Dependabotでは `pull_request_target`、それ以外では通常のpushまた�
 7. PHPUnitを実行してJUnit XMLを作る。
 8. 外部URLからXSLTをダウンロードし、HTMLレポートへ変換する。
 9. Docker Composeサービスを停止する。
-10. レポートを `gh-pages` ブランチへ配置する。
-11. Slackへ結果を通知する。
+10. mainへのpushでは、テストレポートをartifactで公開jobへ渡し、`gh-pages` ブランチへ配置する。
+11. mainへのpushでは、テストとレポート公開の結果をSlackへ通知する。
+
+Pull Requestで実行するテストjobはリポジトリ内容の読み取り権限だけを持ち、Secretを使用しない。`gh-pages` への書き込み権限はmainへのpushでだけ実行する公開jobに限定する。
 
 READMEには「masterにプッシュ」と記載されているが、実際のワークフロー対象は `main` である。
 
@@ -205,7 +206,7 @@ Laravel側には、毎分、毎時、毎月のスケジュール定義がある�
 | PHP | Dockerの8.2 | 運用者確認ではXServerの8.2.30。公開経路からバージョンとServer APIは独立確認できない |
 | データベース | MySQL Server 5.7.35 | `SELECT NOW()` の成功のみ確認、製品とバージョンは未確認 |
 | アプリケーション配置 | `src` をコンテナへバインドマウント | GitHub ActionsからSSHとrsyncで `src` の内容を転送 |
-| `.env` | ルートから `src/.env` へコピー | 配備対象外で、サーバー側の既存ファイルを利用 |
+| `.env` | 公開用 `.env.example` から、Git管理外の `src/.env` を作成 | 配備対象外で、サーバー側の既存ファイルを利用 |
 | スキーマ作成 | MySQL初回起動時にSQLを実行 | 適用方法と実スキーマは未確認 |
 | Scheduler起動 | READMEに起動手順なし | OS側の登録内容は未確認 |
 | ログ | `src/logs` をApacheとMySQLで共有 | 配備時に `logs` を保持、実際の出力先とローテーションは未確認 |
