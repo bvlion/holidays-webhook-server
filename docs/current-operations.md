@@ -45,12 +45,15 @@ WebコンテナはXdebugを常時有効化し、`host.docker.internal:9003` を�
 READMEに記載された初回構築は `make setup` の1コマンドで、処理の流れは次のとおりである。
 
 1. `src/.env` が存在しない場合だけ、ルートの `.env.example` から作成する。
-2. Docker Composeでローカル用イメージをビルドする。
-3. Webイメージ内のPHP 8.2.30とComposer 2.8.12で `composer install` を実行する。
-4. `web` と `db` を起動し、`db-check` でMySQLの応答を待つ。
-5. 初回のMySQLコンテナ作成時にSQLを適用し、空のDatabaseSeederを実行する。
+2. ローカル固定値だけを許可する接続先ガードを実行し、通過後にLaravelの設定キャッシュを削除する。
+3. Docker Composeでローカル用イメージをビルドする。
+4. Webイメージ内のPHP 8.2.30とComposer 2.8.12で `composer install` を実行する。
+5. `web` と `db` を起動し、`db-check` でMySQLの応答を待つ。
+6. 初回のMySQLコンテナ作成時にSQLを適用し、空のDatabaseSeederを実行する。
 
 通常起動、停止、Webイメージ再構築、テスト、総合検証は、それぞれ `make up`、`make stop`、`make rebuild`、`make test`、`make check` で実行する。停止はコンテナを削除せず、再構築はデータベースコンテナを対象にしない。
+
+接続先ガードは、起動またはデータベースアクセスを行う各Make targetの前に、`APP_ENV`、`DB_CONNECTION`、`DB_HOST`、`DB_PORT`、`DB_DATABASE`、`DB_USERNAME`をローカル固定値と照合し、`DATABASE_URL`が存在しないことを確認する。値が一致しない場合は設定値を出力せずに停止する。
 
 Google認証をローカルで使用する場合は、管理者から受け取った `lib/google_client_secret` を `lib/google_client_export.php` で `src/.env` へ反映する手順になっている。
 

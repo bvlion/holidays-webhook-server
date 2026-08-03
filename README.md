@@ -34,6 +34,20 @@ make setup
 
 `make setup` は再実行できる。既存の `src/.env` を上書きせず、既存のデータベースコンテナを再利用する。
 
+### ローカル接続先ガード
+
+`make setup`、`make up`、`make rebuild`、`make test`、`make check` は、Dockerやアプリケーションを実行する前に `src/.env` と同名の実行環境変数を検査する。次のローカル固定値だけを許可し、条件を満たさない場合は設定値を表示せずに中止する。
+
+- `APP_ENV=local`
+- `DB_CONNECTION=mysql`
+- `DB_HOST=db`
+- `DB_PORT=3306`
+- `DB_DATABASE=hw`
+- `DB_USERNAME=user`
+- `DATABASE_URL`が存在しない
+
+ガード通過後、Laravelが古い接続設定を使用しないよう `src/bootstrap/cache/config.php` を削除してから処理を続ける。本番または外部データベース用の `.env` では、これらのローカル開発用コマンドを実行できない。
+
 ### 通常起動
 
 ```shell

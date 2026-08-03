@@ -34,6 +34,8 @@
 
 `src/.env` はGit管理外である。Google連携を使用しない通常の起動とテストでは、Google関連の値を空のまま使用できる。
 
+ローカル開発用Make targetは、アプリケーション起動またはデータベースアクセスの前に、接続設定が `.env.example` のローカル固定値と一致し、`DATABASE_URL`が存在しないことを検査する。検査失敗時は、データベースパスワードを含む設定値を出力せずに停止する。検査通過後は、古い接続先を含み得るLaravel設定キャッシュを削除する。
+
 Google連携が必要な場合は、管理者から安全な経路で受け取った `lib/google_client_secret` を配置し、`lib/google_client_export.php` で `src/.env` へ反映する。`lib/google_client_secret` もGit管理外である。
 
 ### 3.2 継続的インテグレーション
