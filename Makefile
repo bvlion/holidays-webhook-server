@@ -80,4 +80,4 @@ check: local-environment-guard setup
 	$(DOCKER_COMPOSE) exec -T --env XDEBUG_MODE=off web composer --version
 	$(DOCKER_COMPOSE) exec -T --env XDEBUG_MODE=off web php -r 'exit(array_diff(["pdo_mysql", "intl", "gd", "zip"], get_loaded_extensions()) === [] ? 0 : 1);'
 	$(DOCKER_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check-platform-reqs --no-dev
-	$(DOCKER_COMPOSE) exec -T --env XDEBUG_MODE=off web php artisan test
+	$(DOCKER_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check
