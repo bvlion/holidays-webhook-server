@@ -106,4 +106,4 @@ make check
 
 ## テスト
 
-mainにプッシュするとGitHub Actionsによって[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)にテスト結果がアップされる。GitHub ActionsのPHP・Composer環境固定はIssue #211で扱う。
+Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull Requestでは、GitHub Actionsがローカルと同じ固定PHP 8.2.30・Composer 2.8.12・MySQL 5.7.35で `make check` を実行する。mainにプッシュした場合だけ、テスト結果を[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)へアップし、Slackへ通知する。
