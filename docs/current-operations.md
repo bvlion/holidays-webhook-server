@@ -88,16 +88,12 @@ Featureテストはデータベース時刻を取得するため、実行時にM
 Dependabotを含めて通常のpull requestを使い、Pull RequestのコードをSecretへアクセスできる `pull_request_target` では実行しない。処理内容は次のとおりである。
 
 1. 対象コミットをチェックアウトする。
-2. ルートの `.env.example` を `src/.env` へコピーする。
-3. Composer依存関係をキャッシュし、未取得時はComposerコンテナでインストールする。
-4. `web` と `db` をビルドして起動する。
-5. `db-check` でMySQLの起動を待つ。
-6. データベースシーダーを実行する。
-7. PHPUnitを実行してJUnit XMLを作る。
-8. 外部URLからXSLTをダウンロードし、HTMLレポートへ変換する。
-9. Docker Composeサービスを停止する。
-10. mainへのpushでは、テストレポートをartifactで公開jobへ渡し、`gh-pages` ブランチへ配置する。
-11. mainへのpushでは、テストとレポート公開の結果をSlackへ通知する。
+2. `src/composer.lock` のハッシュを鍵として `src/vendor` をキャッシュする。
+3. `make check` を実行する。ローカルの `make check` と同じ手順で、`.env.example` から `src/.env` を作成し、Webイメージ内の固定PHP 8.2.30・Composer 2.8.12で依存関係を導入し、`db` と `db-check` でMySQL 5.7.35の起動を待ち、データベースシーダーを実行し、PHP・Composerのバージョンと必要拡張を確認し、PHPUnitを実行する。`composer:latest` などの固定外イメージは使用しない。
+4. mainへのpushでは、追加でJUnit XMLを出力するPHPUnit実行、外部URLからのXSLTダウンロード、HTMLレポートへの変換を行う。
+5. 成否にかかわらず、`docker compose down --volumes --remove-orphans` でコンテナ・ネットワーク・ボリュームを後処理する。
+6. mainへのpushでは、テストレポートをartifactで公開jobへ渡し、`gh-pages` ブランチへ配置する。
+7. mainへのpushでは、テストとレポート公開の結果をSlackへ通知する。
 
 Pull Requestで実行するテストjobはリポジトリ内容の読み取り権限だけを持ち、Secretを使用しない。`gh-pages` への書き込み権限はmainへのpushでだけ実行する公開jobに限定する。
 

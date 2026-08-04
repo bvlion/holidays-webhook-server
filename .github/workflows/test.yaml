@@ -18,11 +18,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
-      - name: setup
-        run: cp .env.example src/.env
-
-      - name: cache vendor
-        id: cache
+      - name: cache composer vendor
         uses: actions/cache@v4
         with:
           path: ./src/vendor
@@ -30,31 +26,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-composer-
 
-      - name: composer install
-        if: steps.cache.outputs.cache-hit != 'true'
+      # ローカルと同じ固定PHP・Composer・MySQLで、依存関係導入・DB起動・
+      # Laravelのbootstrap確認・テスト実行までを Issue #210 の `make check` に委ねる。
+      # composer:latest は使用しない。
+      - name: make check
+        run: make check
+
+      - name: generate junit report
+        if: ${{ github.event_name == 'push' }}
+        run: docker compose exec -T --env XDEBUG_MODE=off web php artisan test --log-junit result.xml
+
+      - name: build html test report
+        if: ${{ github.event_name == 'push' }}
         run: |
-          cd src
-          docker run --rm --interactive --volume "$PWD:/app" composer install
-          cd ..
-
-      - name: docker start
-        run: docker compose up --build -d web db
-
-      - name: wait start db
-        run: docker compose up --build db-check
-
-      - name: test data insert
-        run: docker compose exec -T web php artisan db:seed
-
-      - name: test
-        run: |
-          docker compose exec -T web php artisan test --log-junit result.xml
-          curl -o lib/phpunit.xslt https://gist.githubusercontent.com/jrfnl/3c28ea6d9b07fd48656d/raw/aaeb0b879647b1cf1dbfd461a2c4a8e292be738d/phpunit.xslt
-          mkdir report
+          curl -fsSL -o lib/phpunit.xslt https://gist.githubusercontent.com/jrfnl/3c28ea6d9b07fd48656d/raw/aaeb0b879647b1cf1dbfd461a2c4a8e292be738d/phpunit.xslt
+          mkdir -p report
           php lib/convert_html.php
-
-      - name: Docker stop
-        run: docker compose stop
 
       - name: store test report
         if: ${{ github.event_name == 'push' }}
@@ -62,6 +49,10 @@ jobs:
         with:
           name: test-report
           path: report
+
+      - name: cleanup containers
+        if: ${{ always() }}
+        run: docker compose down --volumes --remove-orphans
 
   publish-test-report:
     if: ${{ github.event_name == 'push' }}
