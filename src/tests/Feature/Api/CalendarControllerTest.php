@@ -121,11 +121,13 @@ class CalendarControllerTest extends TestCase
     {
         $user = User::factory()->create();
 
+        // Eloquentモデルを直接returnした場合、Laravelは wasRecentlyCreated を見て
+        // 新規作成時のみ自動的に201を返す(更新時は200)。
         $this->actingAs($user, 'api')->postJson('/api/calendar/upsert', [
             'type' => 'user',
             'date' => '2026-05-05',
             'holiday' => 1,
-        ])->assertStatus(200);
+        ])->assertStatus(201);
 
         $this->actingAs($user, 'api')->postJson('/api/calendar/upsert', [
             'type' => 'user',
