@@ -18,6 +18,17 @@ class CommandExecControllerTest extends TestCase
 {
     use DatabaseTransactions;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // 既定では応答を持たない MockHandler を登録する。認可や404判定が回帰して
+        // 実際にHTTPリクエストを送る経路へ入った場合でも、外部ネットワークへは
+        // 接続せずキューが空のまま例外になりテストが失敗する。個別の応答が必要な
+        // テストは bindMockClient() で明示的に上書きする。
+        $this->bindMockClient([]);
+    }
+
     /**
      * @param array $responses GuzzleHttp\Psr7\Response または \Throwable の配列
      */
