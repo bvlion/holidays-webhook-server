@@ -10,14 +10,14 @@ class ApiAuthenticationTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_未認証の場合はAPIへアクセスできない()
+    public function test_未認証の場合は_ap_iへアクセスできない()
     {
         $response = $this->getJson('/api/commands');
 
         $response->assertStatus(401);
     }
 
-    public function test_有効なAPIトークンで認証済みの場合はAPIへアクセスできる()
+    public function test_有効な_ap_iトークンで認証済みの場合は_ap_iへアクセスできる()
     {
         $user = User::factory()->create();
 
@@ -26,11 +26,11 @@ class ApiAuthenticationTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_APIトークンをクエリパラメータで渡しても認証できる()
+    public function test_ap_iトークンをクエリパラメータで渡しても認証できる()
     {
         $user = User::factory()->create();
 
-        $response = $this->getJson('/api/commands?api_token=' . $user->api_token);
+        $response = $this->getJson('/api/commands?api_token='.$user->api_token);
 
         $response->assertStatus(200);
     }

@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\ExecResult;
+use Illuminate\Console\Command;
 
 class DeleteOldExecResultCommand extends Command
 {
@@ -43,13 +43,15 @@ class DeleteOldExecResultCommand extends Command
         $delete = []; // 削除対象 ID 配列
         foreach ($results as $result) {
             // キーがなければ新規追加
-            if (!array_key_exists($result->command_id, $hold)) {
-                $hold[$result->command_id] =[$result];
+            if (! array_key_exists($result->command_id, $hold)) {
+                $hold[$result->command_id] = [$result];
+
                 continue;
             }
             // 100件未満なら保持対象に追加
             if (count($hold[$result->command_id]) < 100) {
                 array_push($hold[$result->command_id], $result);
+
                 continue;
             }
             // 削除対象に追加

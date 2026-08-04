@@ -32,7 +32,7 @@ class OnetimeSkipsControllerTest extends TestCase
         OnetimeSkip::factory()->create(['target_id' => $trigger->id, 'target_type' => 'time', 'deleted_at' => now()]);
 
         $response = $this->actingAs($user, 'api')
-            ->getJson('/api/onetime/skip?target_id=' . $trigger->id . '&target_type=time');
+            ->getJson('/api/onetime/skip?target_id='.$trigger->id.'&target_type=time');
 
         $response->assertStatus(200)->assertExactJson(['skipable_count' => 2, 'skiped_count' => 1]);
     }
@@ -44,7 +44,7 @@ class OnetimeSkipsControllerTest extends TestCase
         $trigger = $this->createTimeTriggerFor($owner);
 
         $response = $this->actingAs($other, 'api')
-            ->getJson('/api/onetime/skip?target_id=' . $trigger->id . '&target_type=time');
+            ->getJson('/api/onetime/skip?target_id='.$trigger->id.'&target_type=time');
 
         $response->assertStatus(403);
     }

@@ -30,7 +30,7 @@ class CommandExecControllerTest extends TestCase
     }
 
     /**
-     * @param array $responses GuzzleHttp\Psr7\Response または \Throwable の配列
+     * @param  array  $responses  GuzzleHttp\Psr7\Response または \Throwable の配列
      */
     private function bindMockClient(array $responses): void
     {
@@ -50,7 +50,7 @@ class CommandExecControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($user, 'api')
-            ->postJson('/api/exec/command/' . $command->id);
+            ->postJson('/api/exec/command/'.$command->id);
 
         $response->assertStatus(200);
         $body = $response->json();
@@ -72,7 +72,7 @@ class CommandExecControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($other, 'api')
-            ->postJson('/api/exec/command/' . $command->id);
+            ->postJson('/api/exec/command/'.$command->id);
 
         $response->assertStatus(403);
     }
@@ -87,7 +87,7 @@ class CommandExecControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($user, 'api')
-            ->postJson('/api/exec/command/' . $command->id);
+            ->postJson('/api/exec/command/'.$command->id);
 
         $response->assertStatus(404);
     }
@@ -126,7 +126,7 @@ class CommandExecControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($user, 'api')
-            ->postJson('/api/exec/summary/' . $summary->id);
+            ->postJson('/api/exec/summary/'.$summary->id);
 
         $response->assertStatus(200);
         $results = $response->json();
@@ -154,14 +154,14 @@ class CommandExecControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($owner, 'api')
-            ->postJson('/api/exec/summary/' . $summary->id);
+            ->postJson('/api/exec/summary/'.$summary->id);
 
         $response->assertStatus(200);
         $this->assertSame('他人のコマンド', $response->json()[0]['name']);
         $this->assertSame(200, $response->json()[0]['response_code']);
     }
 
-    public function test_外部HTTPがエラー応答を返した場合はそのステータスが結果へ反映される()
+    public function test_外部_htt_pがエラー応答を返した場合はそのステータスが結果へ反映される()
     {
         // Guzzleのhttp_errorsミドルウェアが4xx/5xx応答を例外化するため、
         // 実際のHTTPエラー応答と同じ経路で ServerException (RequestExceptionのサブクラス) が送出される。
@@ -170,14 +170,14 @@ class CommandExecControllerTest extends TestCase
         $command = Command::factory()->create(['target_id' => $user->id, 'target_type' => 'user']);
 
         $response = $this->actingAs($user, 'api')
-            ->postJson('/api/exec/command/' . $command->id);
+            ->postJson('/api/exec/command/'.$command->id);
 
         $response->assertStatus(200);
         $body = $response->json()[0];
         $this->assertSame(500, $body['response_code']);
     }
 
-    public function test_レスポンスを伴わないRequestExceptionは現状TypeErrorになる()
+    public function test_レスポンスを伴わない_request_exceptionは現状_type_errorになる()
     {
         // 保存処理は必ずレスポンスオブジェクトを受け取る前提だが、
         // RequestException::getResponse() は null を返し得るため現状は例外になる
@@ -192,6 +192,6 @@ class CommandExecControllerTest extends TestCase
         $this->withoutExceptionHandling();
         $this->expectException(\TypeError::class);
 
-        $this->actingAs($user, 'api')->postJson('/api/exec/command/' . $command->id);
+        $this->actingAs($user, 'api')->postJson('/api/exec/command/'.$command->id);
     }
 }

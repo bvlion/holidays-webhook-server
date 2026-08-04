@@ -2,25 +2,25 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
 use App\Models\TimeTrigger;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ExecResultsController extends BaseApiController
 {
-  public function results(Request $request, int $trigger_id)
-  {
-    $user = $request->user();
-    $trigger = TimeTrigger::find($trigger_id);
+    public function results(Request $request, int $trigger_id)
+    {
+        $user = $request->user();
+        $trigger = TimeTrigger::find($trigger_id);
 
-    $this->checkExecutableUser(
-      $trigger->target_type,
-      $trigger->target_id,
-      $user,
-      'select'
-    );
+        $this->checkExecutableUser(
+            $trigger->target_type,
+            $trigger->target_id,
+            $user,
+            'select'
+        );
 
-    return DB::select("
+        return DB::select("
       SELECT 
         er.response_code,
         er.response_header,
@@ -44,5 +44,5 @@ class ExecResultsController extends BaseApiController
         WHERE
           er.trigger_id = :id
     ", ['id' => $trigger_id]);
-  }
+    }
 }

@@ -21,7 +21,7 @@ class CalendarControllerTest extends TestCase
         return $fake;
     }
 
-    public function test_Google_Calendarの祝日のみ存在する場合はholidayがtrueでforceはfalse()
+    public function test_google_calendarの祝日のみ存在する場合はholidayがtrueでforceはfalse()
     {
         $this->fakeHolidays(['jp2026' => ['2026-01-01' => '元日']]);
         $user = User::factory()->create(['country_code' => 'jp']);
@@ -32,7 +32,7 @@ class CalendarControllerTest extends TestCase
         $response->assertStatus(200)->assertExactJson(['holiday' => true, 'force' => false]);
     }
 
-    public function test_Google_Calendarが休日でなくても個人カレンダーの祝日設定が優先される()
+    public function test_google_calendarが休日でなくても個人カレンダーの祝日設定が優先される()
     {
         $this->fakeHolidays(['jp2026' => []]);
         $user = User::factory()->create(['country_code' => 'jp']);
@@ -49,7 +49,7 @@ class CalendarControllerTest extends TestCase
         $response->assertStatus(200)->assertExactJson(['holiday' => true, 'force' => true]);
     }
 
-    public function test_Google_Calendarが休日でも個人カレンダーの非祝日設定が優先される()
+    public function test_google_calendarが休日でも個人カレンダーの非祝日設定が優先される()
     {
         $this->fakeHolidays(['jp2026' => ['2026-01-01' => '元日']]);
         $user = User::factory()->create(['country_code' => 'jp']);

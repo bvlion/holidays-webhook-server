@@ -1,19 +1,19 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-  return [
-    'server' => date('Y-m-d H:i:s T'),
-    'db' => DB::select('SELECT NOW() AS time')[0]->time,
-  ];
+    return [
+        'server' => date('Y-m-d H:i:s T'),
+        'db' => DB::select('SELECT NOW() AS time')[0]->time,
+    ];
 });
 
 Route::get('/holiday/cache/clear', function () {
-  return [
-    'holidays' => app()->make('HolidayList')->clear()
-  ];
+    return [
+        'holidays' => app()->make('HolidayList')->clear(),
+    ];
 });
 
 Route::get('/auth/redirect', 'GoogleLoginController@redirectGoogleAuth');
