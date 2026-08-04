@@ -116,7 +116,7 @@ class TimeTrigger extends Command
       return;
     }
 
-    $client = new Client();
+    $client = app(Client::class);
 
     $requests = function() use ($client, $triggers) {
       foreach ($triggers as $trigger) {
