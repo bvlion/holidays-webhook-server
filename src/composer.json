@@ -51,7 +51,7 @@
         ],
         "format": "pint",
         "format:check": "pint --test",
-        "analyse": "phpstan analyse",
+        "analyse": "phpstan analyse --memory-limit=512M",
         "check": [
             "@format:check",
             "@analyse",
