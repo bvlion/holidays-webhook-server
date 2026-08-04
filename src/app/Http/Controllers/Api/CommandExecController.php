@@ -58,7 +58,7 @@ class CommandExecController extends BaseApiController
     $results = [];
 
     foreach ($commands as $command) {
-      $client = new Client();
+      $client = app(Client::class);
 
       $options = [];
       $options['allow_redirects'] = true;

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use GuzzleHttp\Client;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -15,6 +16,11 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton('HolidayList', function() {
             return new \App\Libs\HolidayList();
+        });
+
+        // コンテナ経由で解決することで、テストからモック済みハンドラを注入できるようにする。
+        $this->app->singleton(Client::class, function() {
+            return new Client();
         });
     }
 
