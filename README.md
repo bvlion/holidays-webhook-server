@@ -129,13 +129,18 @@ make test
 make check
 ```
 
-`make check` は最後に `composer check`（`composer format:check` → `composer analyse` → `php artisan test`）を実行する。フォーマットと静的解析だけを個別に確認・修正する場合は、`src` 配下でそれぞれ次を使う。
+`make check` は最後に `composer check`（`composer:validate` → `composer:audit` → `composer:prod-check` → `composer format:check` → `composer analyse` → `php artisan test`）を実行する。どれか1つでも失敗すると後続は実行されない。個別に確認・修正する場合は、`src` 配下でそれぞれ次を使う。
 
 ```shell
-composer format       # Laravel Pintでコードを整形する
-composer format:check # 整形せず、フォーマット違反があれば失敗する
-composer analyse      # PHPStan/Larastanを実行する
+composer composer:validate  # composer.json/composer.lockの整合性をstrictに検証する
+composer composer:audit     # composer.lockに記録された依存関係の既知の脆弱性を監査する
+composer composer:prod-check # 本番向け(--no-dev)の依存関係が解決できるかをdry-runで確認する（vendorは変更しない）
+composer format              # Laravel Pintでコードを整形する
+composer format:check        # 整形せず、フォーマット違反があれば失敗する
+composer analyse             # PHPStan/Larastanを実行する
 ```
+
+`composer:audit` は、Issue #214時点で既知だった脆弱性アドバイザリ（直接依存の`guzzlehttp/guzzle`・`laravel/framework`・`phpunit/phpunit`と、いくつかの間接依存）を`composer.json`の`config.audit.ignore`へ理由付きで記録し、新規のアドバイザリが増えた場合だけ失敗する構成にしている。abandoned package（`fruitcake/laravel-cors`、`swiftmailer/swiftmailer`）は結果に表示されるが、依存関係の置き換えを伴うためCIは失敗させない。既知の脆弱性の詳細と対応方針はIssue #214のPull Requestを参照。
 
 ### ローカルで Google 認証
 
