@@ -65,16 +65,17 @@ MySQLコンテナの初回初期化時に `docker/db/sql/*.sql` が実行され�
 
 MySQLのデータディレクトリ `/var/lib/mysql` は、`docker-compose.yml` で `db_data` というnamed volumeへ保存している（Issue #233）。固定名(`name:`)を指定していないため、Composeのproject名ごとに別のvolumeとして扱われる。`make stop`／`make up`、`db` コンテナの再作成、`--volumes` を付けない `docker compose down` ではデータが保持され、`--volumes` 付きの `docker compose down`・`docker volume rm`・`make db-wipe`（要 `CONFIRM=yes`）を実行した場合だけ削除される。バックアップ・復元・完全初期化の手順はREADMEに記載している。
 
+- `make db-backup` は `mysqldump` の出力を `backups/` 内の一時ファイルへ書き出し、成功かつ0バイトでないことを確認できた場合だけ日時付きの最終ファイル名へ `mv` する。失敗時は一時ファイルを削除し、成功メッセージは表示しない。
+- `make db-restore FILE=...` は、指定ファイルが通常ファイルとして存在し0バイトでないことを確認してから投入する。MySQLへの投入に失敗した場合は成功メッセージを表示しない。
+- `make db-wipe CONFIRM=yes` は、開発用Composeプロジェクトに対する `docker compose down --volumes` を使わない。Composeが自動で付与する `com.docker.compose.project`／`com.docker.compose.volume` ラベルで開発用DBのvolumeを1件だけ特定し、該当が0件または複数件の場合は削除せずエラーで停止する。特定できた場合だけ `db` サービスのコンテナとそのvolumeを削除し、`db` だけを作り直す。`web` コンテナには一切触れない。
+
 Issue #213の作業中、一時的な `docker-compose.override.yml` を使って `make check` を既存の開発環境から分離しようとしたが、同一のCompose projectとして扱われたため既存の `hw_web`／`hw_db` が再作成され、その後の `docker compose down --volumes --remove-orphans` で削除された（データディレクトリのnamed volumeが無かったため、DB内のデータも失われた）。Issue #233でこの事故を踏まえ、named volumeによる永続化と、`make check` 専用のCompose project（`docker-compose.check.yml`、2.7節）への分離を行った。
 
 ### 2.5 テスト
 
-ローカルの標準コマンドはDocker内の `php artisan test` である。現在のテストは次の2件だけである。
+ローカルの標準コマンドはDocker内の `php artisan test` である。Feature Test・Unit Testはいずれも `tests/Feature`・`tests/Unit` 配下に追加されており、`make test`（`php artisan test` のみ）または `make check`／`composer check`（Pintのフォーマット確認・PHPStan/Larastanの静的解析に続けて実行）でまとめて実行される。テスト件数は追加・削除により変動するため、個々の件数や一覧はこの文書では管理せず、`src/tests/` 配下を実装の正とする。
 
-- Feature: `/` が200を返すこと
-- Unit: `true` が真であること
-
-Featureテストはデータベース時刻を取得するため、実行時にMySQL接続を必要とする。
+一部のFeature Testはデータベースへ接続するため、実行時にMySQL接続を必要とする。
 
 ### 2.6 キャッシュクリア
 

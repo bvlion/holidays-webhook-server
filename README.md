@@ -86,7 +86,7 @@ MySQLのデータディレクトリ `/var/lib/mysql` は、`docker-compose.yml` 
 make db-backup
 ```
 
-`docker compose exec db mysqldump` を実行し、`backups/hw-<日時>.sql` へ保存する（`backups/` はGit管理対象外）。
+`docker compose exec db mysqldump` の出力を `backups/` 内の一時ファイルへ書き出し、成功かつ0バイトでないことを確認できた場合だけ `backups/hw-<日時>.sql` へ`mv`する（`backups/` はGit管理対象外）。`mysqldump`が失敗した場合や出力が空だった場合は一時ファイルを削除し、成功メッセージは表示しない。
 
 #### 復元
 
@@ -94,7 +94,7 @@ make db-backup
 make db-restore FILE=backups/hw-20260101120000.sql
 ```
 
-指定したバックアップファイルの内容を開発用DBへ流し込む。既存データを上書きするため、`FILE` は必ず明示的に指定する必要がある（省略時はエラーで停止する）。
+指定したバックアップファイルの内容を開発用DBへ流し込む。既存データを上書きするため、`FILE` は必ず明示的に指定する必要がある（省略時はエラーで停止する）。指定ファイルが通常ファイルとして存在し、かつ0バイトでないことを確認してから投入する。MySQLへの投入が失敗した場合は成功メッセージを表示しない。
 
 #### 完全初期化（危険な操作）
 
@@ -104,7 +104,7 @@ make db-wipe CONFIRM=yes
 
 開発用DBのvolumeを削除し、`docker/db/sql` の定義から作り直す。**開発用DBの内容がすべて失われる。** 誤実行を防ぐため `CONFIRM=yes` を明示しない限り実行されない。実行前に `make db-backup` でバックアップを取ることを推奨する。
 
-対象は開発用DBのvolumeだけであり、`make check` が使う検証専用environment（Compose project）には触れない。
+開発用Composeプロジェクトに対する `docker compose down --volumes` は使わない。Composeが自動で付与する `com.docker.compose.project`／`com.docker.compose.volume` ラベルで開発用DBのvolumeを1件だけ特定し、該当が0件または複数件の場合は削除せずエラーで停止する。特定できた場合だけ `db` サービスのコンテナとそのvolumeを削除して作り直すため、開発用`web`コンテナや、`make check` が使う検証専用environment（Compose project）には一切触れない。
 
 **この操作（および `docker volume rm`、`docker compose down --volumes` など、開発用volumeやコンテナを削除しうるDocker操作全般）は、利用者から明示的な許可を得た場合を除き、AIエージェントや自動化から無断で実行してはならない。** 検証や調査の過程で誤って実行してしまった場合、実行してよいか判断がつかない場合、既存の開発環境と衝突しそうな場合は、その時点で作業を止め、状況を日本語で具体的に報告すること。
 
