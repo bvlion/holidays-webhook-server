@@ -50,7 +50,7 @@
             "@php artisan key:generate --ansi"
         ],
         "composer:validate": "composer validate --strict",
-        "composer:audit": "composer audit --locked",
+        "composer:audit": "@php scripts/audit-guard.php",
         "composer:prod-check": "composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --dry-run",
         "format": "pint",
         "format:check": "pint --test",

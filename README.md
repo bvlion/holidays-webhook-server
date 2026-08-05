@@ -133,14 +133,22 @@ make check
 
 ```shell
 composer composer:validate  # composer.json/composer.lockの整合性をstrictに検証する
-composer composer:audit     # composer.lockに記録された依存関係の既知の脆弱性を監査する
+composer composer:audit     # 監査ラッパー(scripts/audit-guard.php)経由でcomposer.lockの既知の脆弱性を監査する
 composer composer:prod-check # 本番向け(--no-dev)の依存関係が解決できるかをdry-runで確認する（vendorは変更しない）
 composer format              # Laravel Pintでコードを整形する
 composer format:check        # 整形せず、フォーマット違反があれば失敗する
 composer analyse             # PHPStan/Larastanを実行する
 ```
 
-`composer:audit` は、Issue #214時点で既知だった脆弱性アドバイザリ（直接依存の`guzzlehttp/guzzle`・`laravel/framework`・`phpunit/phpunit`と、いくつかの間接依存）を`composer.json`の`config.audit.ignore`へ理由付きで記録し、新規のアドバイザリが増えた場合だけ失敗する構成にしている。abandoned package（`fruitcake/laravel-cors`、`swiftmailer/swiftmailer`）は結果に表示されるが、依存関係の置き換えを伴うためCIは失敗させない。既知の脆弱性の詳細と対応方針はIssue #214のPull Requestを参照。
+`composer:audit` は素の`composer audit`を直接呼ばず、`scripts/audit-guard.php`という監査ラッパーを経由する（Issue #214）。Composer 2.8.12はPackagistへのアドバイザリ取得自体に失敗した場合、例外を捕捉せず異常終了（終了コード100・標準出力は空）する挙動を隔離環境で確認済みだが、この挙動に依存せず将来のComposerの変更にも耐えられるよう、ラッパーは`composer audit --locked --format=json`の終了コードとJSON構造の両方を検証し、次のいずれかに該当する場合は「監査取得失敗」として失敗させる。
+
+- 終了コードが正常完了時のビットマスク(0/1/2/3)以外
+- 標準出力が空、またはJSONとして解析できない
+- `advisories`・`abandoned`フィールドが欠落している
+
+これにより、「監査に成功しbaseline外の脆弱性がなかった」場合と「アドバイザリ取得先に到達できず結果を取得できなかった」場合を区別し、後者を「脆弱性なし」として誤成功させない。
+
+`composer:audit`（ラッパー）は、Issue #214時点で既知だった脆弱性アドバイザリ（直接依存の`guzzlehttp/guzzle`・`laravel/framework`・`phpunit/phpunit`と、いくつかの間接依存）を`composer.json`の`config.audit.ignore`へ理由付きで記録し、新規のアドバイザリが増えた場合だけ失敗する構成にしている。abandoned package（`fruitcake/laravel-cors`、`swiftmailer/swiftmailer`）は結果に表示されるが、依存関係の置き換えを伴うためCIは失敗させない（`config.audit.abandoned=report`）。既知の脆弱性の詳細と対応方針、および44件のbaseline解消を追跡するフォローアップIssueはIssue #214のPull Request（#235）を参照。
 
 ### ローカルで Google 認証
 
