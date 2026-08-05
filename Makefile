@@ -113,22 +113,33 @@ check-clean:
 # 開発用DBを mysqldump でバックアップする。$(BACKUP_DIR) はGit管理対象外。
 # mysqldumpの出力はいったん $(BACKUP_DIR) 内の一時ファイルへ書き出し、
 # 成功かつ0バイトでないことを確認できた場合だけ日時付きの最終ファイル名へ
-# mv する。失敗時は一時ファイルを削除し、成功メッセージを表示しない。
+# mv する。一時ファイルは trap で確実に削除する対象にし、最終ファイルへの
+# mv が成功した場合だけ trap を解除する。mv 自体の成否も明示的に確認し、
+# 失敗時・最終ファイルの存在/非空を確認できない場合は成功メッセージを
+# 表示せず終了コード0以外で終了する。
 db-backup: local-environment-guard
 	@mkdir -p $(BACKUP_DIR)
 	@tmp="$$(mktemp "$(BACKUP_DIR)/.tmp-XXXXXX")"; \
+	trap 'rm -f "$$tmp"' EXIT; \
 	if ! $(DOCKER_COMPOSE) exec -T db sh -c 'exec mysqldump -u root -p"$$MYSQL_ROOT_PASSWORD" hw' > "$$tmp"; then \
-		echo "mysqldumpに失敗したためバックアップを中止しました。" >&2; \
-		rm -f "$$tmp"; \
+		echo "[中止] mysqldumpに失敗したためバックアップを中止しました。" >&2; \
 		exit 1; \
 	fi; \
 	if [ ! -s "$$tmp" ]; then \
-		echo "バックアップの出力が空だったため中止しました。" >&2; \
-		rm -f "$$tmp"; \
+		echo "[中止] バックアップの出力が空だったため中止しました。" >&2; \
 		exit 1; \
 	fi; \
-	mv "$$tmp" "$(BACKUP_FILE)"; \
-	echo "開発用DBを $(BACKUP_FILE) へバックアップしました。"
+	if ! mv "$$tmp" "$(BACKUP_FILE)"; then \
+		echo "[中止] バックアップファイルの保存(mv)に失敗しました。" >&2; \
+		exit 1; \
+	fi; \
+	trap - EXIT; \
+	if [ -f "$(BACKUP_FILE)" ] && [ -s "$(BACKUP_FILE)" ]; then \
+		echo "開発用DBを $(BACKUP_FILE) へバックアップしました。"; \
+	else \
+		echo "[中止] バックアップファイル $(BACKUP_FILE) の保存を確認できませんでした。" >&2; \
+		exit 1; \
+	fi
 
 # 開発用DBを指定したバックアップファイルから復元する（既存データを上書きする）。
 # 使い方: make db-restore FILE=backups/hw-20260101120000.sql
@@ -147,7 +158,7 @@ db-restore: local-environment-guard
 		echo "指定されたバックアップファイルが空です: $(FILE)" >&2; \
 		exit 1; \
 	fi
-	@if $(DOCKER_COMPOSE) exec -T db sh -c 'exec mysql -u root -p"$$MYSQL_ROOT_PASSWORD" hw' < $(FILE); then \
+	@if $(DOCKER_COMPOSE) exec -T db sh -c 'exec mysql -u root -p"$$MYSQL_ROOT_PASSWORD" hw' < "$(FILE)"; then \
 		echo "$(FILE) から開発用DBを復元しました。"; \
 	else \
 		echo "$(FILE) からの復元に失敗しました。" >&2; \
@@ -162,7 +173,12 @@ db-restore: local-environment-guard
 # `com.docker.compose.project` / `com.docker.compose.volume` ラベルで
 # 開発用DBのvolumeを1件だけ特定し、そのvolumeだけを明示的に削除する。
 # 該当が0件または複数件の場合は、削除を行わずエラーで停止する。
-# dbサービスのコンテナだけを停止・削除し、webコンテナには一切触れない。
+# volumeの検索自体もCONFIRM=yesの確認後（このtargetの実行時）にだけ行い、
+# 他のtargetの実行や `make` の読み込み時には `docker volume ls` を呼ばない。
+# 各段階（停止・削除・volume削除・削除確認・再作成・db-check）の成否を
+# 明示的に確認し、途中で失敗した場合はその時点で中止して成功メッセージを
+# 表示しない。dbサービスのコンテナだけを対象とし、webコンテナや検証用
+# Composeプロジェクトには一切触れない。
 db-wipe: local-environment-guard
 	@if [ "$(CONFIRM)" != "yes" ]; then \
 		echo "この操作は開発用データベース（$(DEV_PROJECT)）のデータを完全に削除します。" >&2; \
@@ -176,12 +192,32 @@ db-wipe: local-environment-guard
 		--format '{{.Name}}')"; \
 	count="$$(printf '%s\n' "$$volume" | grep -c .)"; \
 	if [ "$$count" -ne 1 ]; then \
-		echo "開発用DB(project=$(DEV_PROJECT))のvolumeを1件だけ特定できなかったため中止しました（該当: $$count 件）。" >&2; \
+		echo "[中止] 開発用DB(project=$(DEV_PROJECT))のvolumeを1件だけ特定できませんでした（該当: $$count 件）。" >&2; \
 		exit 1; \
 	fi; \
 	echo "削除対象volume: $$volume"; \
-	$(DOCKER_COMPOSE) rm --force --stop db; \
-	docker volume rm "$$volume"; \
-	$(DOCKER_COMPOSE) up --detach db; \
-	$(DOCKER_COMPOSE) run --rm --no-deps db-check
-	@echo "開発用DBを初期化しました（docker/db/sql の定義から作り直しました）。"
+	if ! $(DOCKER_COMPOSE) stop db; then \
+		echo "[中止] 開発用dbサービスの停止に失敗しました。" >&2; \
+		exit 1; \
+	fi; \
+	if ! $(DOCKER_COMPOSE) rm --force db; then \
+		echo "[中止] 開発用dbコンテナの削除に失敗しました。" >&2; \
+		exit 1; \
+	fi; \
+	if ! docker volume rm "$$volume"; then \
+		echo "[中止] volume $$volume の削除に失敗しました。DBは初期化されていません。" >&2; \
+		exit 1; \
+	fi; \
+	if docker volume inspect "$$volume" >/dev/null 2>&1; then \
+		echo "[中止] volume $$volume の削除を確認できませんでした。DBは初期化されていません。" >&2; \
+		exit 1; \
+	fi; \
+	if ! $(DOCKER_COMPOSE) up --detach db; then \
+		echo "[中止] 開発用dbコンテナの再作成に失敗しました。" >&2; \
+		exit 1; \
+	fi; \
+	if ! $(DOCKER_COMPOSE) run --rm --no-deps db-check; then \
+		echo "[中止] 初期化後の開発用DBの起動確認(db-check)に失敗しました。" >&2; \
+		exit 1; \
+	fi; \
+	echo "開発用DBを初期化しました（docker/db/sql の定義から作り直しました）。"
