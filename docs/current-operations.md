@@ -57,26 +57,45 @@ READMEに記載された初回構築は `make setup` の1コマンドで、処�
 
 Google認証をローカルで使用する場合は、管理者から受け取った `lib/google_client_secret` を `lib/google_client_export.php` で `src/.env` へ反映する手順になっている。
 
-### 2.4 データベース初期化
+### 2.4 データベース初期化と永続化
 
 MySQLコンテナの初回初期化時に `docker/db/sql/*.sql` が実行され、11テーブルを作成する。Laravelマイグレーションは存在しないため、既存データベースに対する差分適用経路はリポジトリ内にない。
 
 `DatabaseSeeder` は空である。継続的インテグレーションでは `php artisan db:seed` を実行するが、現在はデータを投入しない。
 
+MySQLのデータディレクトリ `/var/lib/mysql` は、`docker-compose.yml` で `db_data` というnamed volumeへ保存している（Issue #233）。固定名(`name:`)を指定していないため、Composeのproject名ごとに別のvolumeとして扱われる。`make stop`／`make up`、`db` コンテナの再作成、`--volumes` を付けない `docker compose down` ではデータが保持され、`--volumes` 付きの `docker compose down`・`docker volume rm`・`make db-wipe`（要 `CONFIRM=yes`）を実行した場合だけ削除される。バックアップ・復元・完全初期化の手順はREADMEに記載している。
+
+- `make db-backup` は `mysqldump` の出力を `backups/` 内の一時ファイルへ書き出し、成功かつ0バイトでないことを確認できた場合だけ日時付きの最終ファイル名へ `mv` する。失敗時は一時ファイルを削除し、成功メッセージは表示しない。
+- `make db-restore FILE=...` は、指定ファイルが通常ファイルとして存在し0バイトでないことを確認してから投入する。MySQLへの投入に失敗した場合は成功メッセージを表示しない。
+- `make db-wipe CONFIRM=yes` は、開発用Composeプロジェクトに対する `docker compose down --volumes` を使わない。Composeが自動で付与する `com.docker.compose.project`／`com.docker.compose.volume` ラベルで開発用DBのvolumeを1件だけ特定し、該当が0件または複数件の場合は削除せずエラーで停止する。特定できた場合だけ `db` サービスのコンテナとそのvolumeを削除し、`db` だけを作り直す。`web` コンテナには一切触れない。
+
+Issue #213の作業中、一時的な `docker-compose.override.yml` を使って `make check` を既存の開発環境から分離しようとしたが、同一のCompose projectとして扱われたため既存の `hw_web`／`hw_db` が再作成され、その後の `docker compose down --volumes --remove-orphans` で削除された（データディレクトリのnamed volumeが無かったため、DB内のデータも失われた）。Issue #233でこの事故を踏まえ、named volumeによる永続化と、`make check` 専用のCompose project（`docker-compose.check.yml`、2.7節）への分離を行った。
+
 ### 2.5 テスト
 
-ローカルの標準コマンドはDocker内の `php artisan test` である。現在のテストは次の2件だけである。
+ローカルの標準コマンドはDocker内の `php artisan test` である。Feature Test・Unit Testはいずれも `tests/Feature`・`tests/Unit` 配下に追加されており、`make test`（`php artisan test` のみ）または `make check`／`composer check`（Pintのフォーマット確認・PHPStan/Larastanの静的解析に続けて実行）でまとめて実行される。テスト件数は追加・削除により変動するため、個々の件数や一覧はこの文書では管理せず、`src/tests/` 配下を実装の正とする。
 
-- Feature: `/` が200を返すこと
-- Unit: `true` が真であること
-
-Featureテストはデータベース時刻を取得するため、実行時にMySQL接続を必要とする。
+一部のFeature Testはデータベースへ接続するため、実行時にMySQL接続を必要とする。
 
 ### 2.6 キャッシュクリア
 
 `cache_clear.sh` は、Laravelのアプリケーション、設定、ルート、ビュー等のキャッシュを削除・再生成し、Composerのオートローダーを再生成する。最後に `src/bootstrap/cache/config.php` を削除する。
 
 このスクリプトはローカルDocker Composeのコンテナ名とマウント構成を前提としており、本番デプロイワークフローからは呼ばれない。
+
+### 2.7 検証環境の分離（`make check`）
+
+`make check` は `docker-compose.check.yml` と、開発用（既定で `holidays-webhook-server`）とは異なるCompose project名（既定で `holidays-webhook-server-check`）を使う（Issue #233）。開発用の `docker-compose.yml` との主な違いは次のとおりである。
+
+| 項目 | 開発用 | 検証用(`make check`) |
+| --- | --- | --- |
+| Compose project名 | `holidays-webhook-server` | `holidays-webhook-server-check` |
+| `container_name` | 指定しない（project名で一意になる） | 指定しない（project名で一意になる） |
+| host port公開 | web: 8000、db: 3346 | なし |
+| DBデータ | named volume `db_data` で永続化 | volumeなし（コンテナと共に消える使い捨て） |
+| 通常のcleanup対象 | なし（`make stop`はコンテナを残す） | `make check`終了時に検証用projectだけを `down --volumes --remove-orphans` |
+
+`web`・`db`・`db-check` のbuild対象・環境変数・`src`／`docker/db/sql`等のマウント内容は開発用と同じにしてあり、検証結果が開発環境と乖離しないようにしている。
 
 ## 3. 継続的インテグレーション
 
@@ -89,9 +108,9 @@ Dependabotを含めて通常のpull requestを使い、Pull Requestのコード�
 
 1. 対象コミットをチェックアウトする。
 2. `src/composer.lock` のハッシュを鍵として `src/vendor` をキャッシュする。
-3. `make check` を実行する。ローカルの `make check` と同じ手順で、`.env.example` から `src/.env` を作成し、Webイメージ内の固定PHP 8.2.30・Composer 2.8.12で依存関係を導入し、`db` と `db-check` でMySQL 5.7.35の起動を待ち、データベースシーダーを実行し、PHP・Composerのバージョンと必要拡張を確認し、最後に `composer check`（Laravel Pintによるフォーマット確認 → PHPStan/Larastanによる静的解析 → PHPUnit）を実行する。フォーマット違反または新規の静的解析違反があれば失敗する。`composer:latest` などの固定外イメージは使用しない。
-4. mainへのpushでは、追加でJUnit XMLを出力するPHPUnit実行、外部URLからのXSLTダウンロード、HTMLレポートへの変換を行う。
-5. 成否にかかわらず、`docker compose down --volumes --remove-orphans` でコンテナ・ネットワーク・ボリュームを後処理する。
+3. `make check` を実行する。ローカルの `make check` と同じ手順で、開発環境とは別のCompose project（`docker-compose.check.yml`、Issue #233）上で、`.env.example` から `src/.env` を作成し、Webイメージ内の固定PHP 8.2.30・Composer 2.8.12で依存関係を導入し、`db` と `db-check` でMySQL 5.7.35の起動を待ち、データベースシーダーを実行し、PHP・Composerのバージョンと必要拡張を確認し、最後に `composer check`（Laravel Pintによるフォーマット確認 → PHPStan/Larastanによる静的解析 → `--log-junit result.xml` 付きのPHPUnit）を実行する。フォーマット違反または新規の静的解析違反があれば失敗する。`composer:latest` などの固定外イメージは使用しない。CIランナー自体が使い捨てのため既存環境との衝突は元々起きないが、ローカルでも同じ `make check` が安全に使えるよう検証専用のCompose projectを使っている。
+4. `composer check` が出力した `src/result.xml`（bind mount経由でRunner側に残る）を使って、mainへのpushでは外部URLからのXSLTダウンロードとHTMLレポートへの変換を行う。追加のPHPUnit実行はしない。
+5. `make check` は、成功・失敗にかかわらず検証専用のCompose projectだけを対象に `docker compose down --volumes --remove-orphans` を実行して後処理する（Makefile内の`trap`によるcleanupで、workflow側からは呼ばない）。開発用の構成は元々このworkflow上に存在しないため影響しない。
 6. mainへのpushでは、テストレポートをartifactで公開jobへ渡し、`gh-pages` ブランチへ配置する。
 7. mainへのpushでは、テストとレポート公開の結果をSlackへ通知する。
 

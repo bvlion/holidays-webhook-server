@@ -1,8 +1,20 @@
+# make check（およびCI）専用のCompose構成。
+#
+# 常に `docker-compose.yml` とは別のCompose project名で実行し
+# （Makefileの CHECK_PROJECT を参照）、次の点で開発用構成と分離している。
+#
+# - container_name を固定しない（プロジェクト名で自動的に一意になる）
+# - hostへportを公開しない（すべて `docker compose exec` 経由で操作する）
+# - DB用のnamed volumeを持たない（検証用DBは使い捨てで、コンテナと共に消える）
+#
+# `web`・`db`・`db-check` の build・環境変数・マウント内容は、検証結果が
+# 開発環境と揺れないよう `docker-compose.yml` と揃えている。ビルド対象
+# （`docker/web`・`docker/db`・`docker/checker`）や環境変数を変更する場合は
+# 両方のファイルを更新すること。
+
 services:
   web:
     build: ./docker/web
-    ports:
-      - 8000:80
     tty: true
     stdin_open: true
     volumes:
@@ -14,25 +26,16 @@ services:
 
   db:
     build: ./docker/db
-    restart: always
     environment:
       TZ: Asia/Tokyo
       MYSQL_DATABASE: hw
       MYSQL_USER: user
       MYSQL_PASSWORD: password
       MYSQL_ROOT_PASSWORD: rootpassword
-    ports:
-      - "3346:3306"
     volumes:
       - ./docker/db/conf:/etc/mysql
       - ./src/logs:/var/log/mysql
       - ./docker/db/sql:/docker-entrypoint-initdb.d
-      # /var/lib/mysql をnamed volumeへ保存し、コンテナの再作成や
-      # `docker compose down`（--volumesなし）でもデータを失わないようにする。
-      # このvolumeはCompose実行時のプロジェクト名で自動的に名前空間分けされる
-      # ため、検証専用プロジェクト（docker-compose.check.yml、常に別プロジェクト名
-      # で実行する）とは異なるvolumeになり、共有されない。
-      - db_data:/var/lib/mysql
 
   db-check:
     build: ./docker/checker
@@ -48,9 +51,3 @@ services:
           sleep 1
         done
         exit 1
-
-volumes:
-  # 固定名(`name:`)を指定しないことで、Composeのプロジェクト名ごとに
-  # 別のvolumeとして扱われる。開発用プロジェクトと検証用プロジェクトが
-  # 同じvolumeを共有することはない。
-  db_data:
