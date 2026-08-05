@@ -12,3 +12,4 @@ src/result.xml
 lib/phpunit.xslt
 /.env
 src/.env
+/backups/

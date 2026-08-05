@@ -28,14 +28,16 @@ jobs:
 
       # ローカルと同じ固定PHP・Composer・MySQLで、依存関係導入・DB起動・
       # Laravelのbootstrap確認・テスト実行までを Issue #210 の `make check` に委ねる。
-      # composer:latest は使用しない。
+      # composer:latest は使用しない。`make check` は検証専用のCompose project
+      # （docker-compose.check.yml、Issue #233）だけを使い、成功・失敗に
+      # かかわらず自分自身でそのprojectをcleanupするため、このworkflowから
+      # 追加でcompose downを呼ぶ必要はない。
       - name: make check
         run: make check
 
-      - name: generate junit report
-        if: ${{ github.event_name == 'push' }}
-        run: docker compose exec -T --env XDEBUG_MODE=off web php artisan test --log-junit result.xml
-
+      # `make check` が実行する `composer check` は `--log-junit result.xml` 付きで
+      # テストを実行するため、`src/result.xml` はコンテナ終了後もbind mount経由で
+      # ホスト（Runner）側に残る。テストを二重実行せず、そのXMLをそのまま使う。
       - name: build html test report
         if: ${{ github.event_name == 'push' }}
         run: |
@@ -49,10 +51,6 @@ jobs:
         with:
           name: test-report
           path: report
-
-      - name: cleanup containers
-        if: ${{ always() }}
-        run: docker compose down --volumes --remove-orphans
 
   publish-test-report:
     if: ${{ github.event_name == 'push' }}

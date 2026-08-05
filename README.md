@@ -62,7 +62,7 @@ make up
 make stop
 ```
 
-コンテナを削除せずに停止するため、ローカルデータベースの内容は保持される。現在のデータベースはコンテナ内にデータを保持するため、データを残す必要がある場合は `docker compose down` を使用しない。
+コンテナを削除せずに停止するため、ローカルデータベースの内容は保持される。MySQLのデータは `/var/lib/mysql` をnamed volumeへ保存しているため（後述）、`docker compose down`（`--volumes` を付けない場合）やコンテナの再作成でもデータは失われない。
 
 ### Webイメージの再構築
 
@@ -71,6 +71,51 @@ make rebuild
 ```
 
 Webイメージだけをキャッシュなしで再構築する。データベースコンテナは再作成しない。
+
+### 開発用データベースの永続化
+
+MySQLのデータディレクトリ `/var/lib/mysql` は、`docker-compose.yml` で `db_data` というnamed volumeへ保存している（Issue #233）。このvolumeには固定名(`name:`)を指定していないため、Composeのproject名（既定では `holidays-webhook-server`）ごとに別のvolumeとして扱われる。
+
+- `make stop` → `make up`、`make rebuild`、通常の `docker compose down`（`--volumes` なし）、`db` コンテナの再作成では、`db_data` は削除されずデータが保持される。
+- データを完全に削除するのは、`--volumes` を明示的に付けた `docker compose down`、`docker volume rm`、または後述の `make db-wipe` を実行した場合だけである。
+- `make check`（後述）は開発用とは別のCompose project・別のDB（volumeなし・使い捨て）を使うため、`make check` を実行しても開発用DBのデータには影響しない。
+
+#### バックアップ
+
+```shell
+make db-backup
+```
+
+`docker compose exec db mysqldump` を実行し、`backups/hw-<日時>.sql` へ保存する（`backups/` はGit管理対象外）。
+
+#### 復元
+
+```shell
+make db-restore FILE=backups/hw-20260101120000.sql
+```
+
+指定したバックアップファイルの内容を開発用DBへ流し込む。既存データを上書きするため、`FILE` は必ず明示的に指定する必要がある（省略時はエラーで停止する）。
+
+#### 完全初期化（危険な操作）
+
+```shell
+make db-wipe CONFIRM=yes
+```
+
+開発用DBのvolumeを削除し、`docker/db/sql` の定義から作り直す。**開発用DBの内容がすべて失われる。** 誤実行を防ぐため `CONFIRM=yes` を明示しない限り実行されない。実行前に `make db-backup` でバックアップを取ることを推奨する。
+
+対象は開発用DBのvolumeだけであり、`make check` が使う検証専用environment（Compose project）には触れない。
+
+**この操作（および `docker volume rm`、`docker compose down --volumes` など、開発用volumeやコンテナを削除しうるDocker操作全般）は、利用者から明示的な許可を得た場合を除き、AIエージェントや自動化から無断で実行してはならない。** 検証や調査の過程で誤って実行してしまった場合、実行してよいか判断がつかない場合、既存の開発環境と衝突しそうな場合は、その時点で作業を止め、状況を日本語で具体的に報告すること。
+
+### 検証環境の分離（`make check`）
+
+`make check` は、開発用とは異なるCompose project（既定では `holidays-webhook-server-check`）と `docker-compose.check.yml` を使って、依存関係の導入からテストまでを実行する（Issue #233）。
+
+- 開発用のcontainer・network・volume・host portには一切触れない。開発環境を起動したままでも、停止したままでも実行できる。
+- 検証用のcontainer・networkは開発用と別名になり、host portは公開しない。
+- 検証用DBはnamed volumeを持たない使い捨てで、`make check` の成功・失敗にかかわらず、検証用Compose projectだけを対象にcleanup（`docker compose down --volumes --remove-orphans`）する。
+- 一時的な `docker-compose.override.yml` は使用しない。検証用の構成は `docker-compose.check.yml` としてリポジトリに含まれている。
 
 ### テスト
 

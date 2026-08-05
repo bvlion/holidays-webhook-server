@@ -55,7 +55,7 @@
         "check": [
             "@format:check",
             "@analyse",
-            "@php artisan test"
+            "@php artisan test --log-junit result.xml"
         ]
     },
     "extra": {
