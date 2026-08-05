@@ -76,7 +76,7 @@ class CommandsControllerTest extends TestCase
         $response->assertStatus(400);
     }
 
-    public function test_target_typeがuserの場合は自分のIDが対象になる()
+    public function test_target_typeがuserの場合は自分の_i_dが対象になる()
     {
         $user = User::factory()->create();
 
@@ -92,7 +92,7 @@ class CommandsControllerTest extends TestCase
         $this->assertDatabaseHasCommand($user->id, 'user', 'テストコマンド');
     }
 
-    public function test_target_typeがgroupの場合は所属グループのIDが対象になる()
+    public function test_target_typeがgroupの場合は所属グループの_i_dが対象になる()
     {
         $group = Group::factory()->create();
         $user = User::factory()->create(['groups_id' => $group->id]);
@@ -119,7 +119,7 @@ class CommandsControllerTest extends TestCase
             'url' => 'https://example.test/old',
         ]);
 
-        $response = $this->actingAs($user, 'api')->putJson('/api/commands/' . $command->id, [
+        $response = $this->actingAs($user, 'api')->putJson('/api/commands/'.$command->id, [
             'target_name' => '新名称',
         ]);
 
@@ -135,7 +135,7 @@ class CommandsControllerTest extends TestCase
         $other = User::factory()->create();
         $command = Command::factory()->create(['target_id' => $owner->id, 'target_type' => 'user']);
 
-        $response = $this->actingAs($other, 'api')->putJson('/api/commands/' . $command->id, [
+        $response = $this->actingAs($other, 'api')->putJson('/api/commands/'.$command->id, [
             'target_name' => '書き換え',
         ]);
 
@@ -165,7 +165,7 @@ class CommandsControllerTest extends TestCase
         $user = User::factory()->create();
         $command = Command::factory()->create(['target_id' => $user->id, 'target_type' => 'user']);
 
-        $response = $this->actingAs($user, 'api')->deleteJson('/api/commands/' . $command->id);
+        $response = $this->actingAs($user, 'api')->deleteJson('/api/commands/'.$command->id);
 
         $response->assertStatus(200);
         $this->assertNotNull($command->fresh()->deleted_at);
@@ -177,7 +177,7 @@ class CommandsControllerTest extends TestCase
         $other = User::factory()->create();
         $command = Command::factory()->create(['target_id' => $owner->id, 'target_type' => 'user']);
 
-        $response = $this->actingAs($other, 'api')->deleteJson('/api/commands/' . $command->id);
+        $response = $this->actingAs($other, 'api')->deleteJson('/api/commands/'.$command->id);
 
         $response->assertStatus(403);
         $this->assertNull($command->fresh()->deleted_at);

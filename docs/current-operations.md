@@ -89,7 +89,7 @@ Dependabotを含めて通常のpull requestを使い、Pull Requestのコード�
 
 1. 対象コミットをチェックアウトする。
 2. `src/composer.lock` のハッシュを鍵として `src/vendor` をキャッシュする。
-3. `make check` を実行する。ローカルの `make check` と同じ手順で、`.env.example` から `src/.env` を作成し、Webイメージ内の固定PHP 8.2.30・Composer 2.8.12で依存関係を導入し、`db` と `db-check` でMySQL 5.7.35の起動を待ち、データベースシーダーを実行し、PHP・Composerのバージョンと必要拡張を確認し、PHPUnitを実行する。`composer:latest` などの固定外イメージは使用しない。
+3. `make check` を実行する。ローカルの `make check` と同じ手順で、`.env.example` から `src/.env` を作成し、Webイメージ内の固定PHP 8.2.30・Composer 2.8.12で依存関係を導入し、`db` と `db-check` でMySQL 5.7.35の起動を待ち、データベースシーダーを実行し、PHP・Composerのバージョンと必要拡張を確認し、最後に `composer check`（Laravel Pintによるフォーマット確認 → PHPStan/Larastanによる静的解析 → PHPUnit）を実行する。フォーマット違反または新規の静的解析違反があれば失敗する。`composer:latest` などの固定外イメージは使用しない。
 4. mainへのpushでは、追加でJUnit XMLを出力するPHPUnit実行、外部URLからのXSLTダウンロード、HTMLレポートへの変換を行う。
 5. 成否にかかわらず、`docker compose down --volumes --remove-orphans` でコンテナ・ネットワーク・ボリュームを後処理する。
 6. mainへのpushでは、テストレポートをartifactで公開jobへ渡し、`gh-pages` ブランチへ配置する。

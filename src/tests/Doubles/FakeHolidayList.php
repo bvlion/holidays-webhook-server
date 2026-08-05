@@ -24,7 +24,7 @@ class FakeHolidayList
 
     public function getHolidays($code, $year)
     {
-        $key = $code . $year;
+        $key = $code.$year;
         $this->requestedKeys[] = $key;
 
         return $this->holidaysByKey[$key] ?? [];

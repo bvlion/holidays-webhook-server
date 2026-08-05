@@ -16,7 +16,7 @@ class GoogleLoginControllerTest extends TestCase
 
     private function fakeGoogleUser(string $email, string $name = 'テストユーザー', string $token = 'google-token'): GoogleUser
     {
-        $googleUser = new GoogleUser();
+        $googleUser = new GoogleUser;
         $googleUser->email = $email;
         $googleUser->name = $name;
         $googleUser->token = $token;
@@ -24,7 +24,7 @@ class GoogleLoginControllerTest extends TestCase
         return $googleUser;
     }
 
-    public function test_authredirectはGoogleの認証画面へリダイレクトする()
+    public function test_authredirectは_googleの認証画面へリダイレクトする()
     {
         $provider = Mockery::mock();
         $provider->shouldReceive('redirect')->once()
@@ -36,7 +36,7 @@ class GoogleLoginControllerTest extends TestCase
         $response->assertRedirect('https://accounts.google.com/o/oauth2/auth');
     }
 
-    public function test_未登録のGoogleアカウントは新しいグループと所有者ユーザーを作成する()
+    public function test_未登録の_googleアカウントは新しいグループと所有者ユーザーを作成する()
     {
         $googleUser = $this->fakeGoogleUser('new-owner@example.test');
         $provider = Mockery::mock();

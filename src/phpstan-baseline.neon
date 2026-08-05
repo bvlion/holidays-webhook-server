@@ -1,0 +1,26 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\DeleteOldExecResultCommand\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/DeleteOldExecResultCommand.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\TimeTrigger\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/TimeTrigger.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\UpdateHolidayCache\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/UpdateHolidayCache.php
+
+		-
+			message: "#^Caught class App\\\\Http\\\\Controllers\\\\Api\\\\Exception not found\\.$#"
+			count: 2
+			path: app/Http/Controllers/Api/CalendarController.php
+
+		-
+			message: "#^Variable \\$holidays might not be defined\\.$#"
+			count: 2
+			path: app/Libs/HolidayList.php

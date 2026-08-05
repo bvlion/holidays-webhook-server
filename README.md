@@ -78,10 +78,18 @@ Webイメージだけをキャッシュなしで再構築する。データベ�
 make test
 ```
 
-環境構築からPHP・Composer・必要なPHP拡張・テストまでをまとめて確認する場合は、次を実行する。
+環境構築からPHP・Composer・必要なPHP拡張・フォーマット確認・静的解析・テストまでをまとめて確認する場合は、次を実行する。
 
 ```shell
 make check
+```
+
+`make check` は最後に `composer check`（`composer format:check` → `composer analyse` → `php artisan test`）を実行する。フォーマットと静的解析だけを個別に確認・修正する場合は、`src` 配下でそれぞれ次を使う。
+
+```shell
+composer format       # Laravel Pintでコードを整形する
+composer format:check # 整形せず、フォーマット違反があれば失敗する
+composer analyse      # PHPStan/Larastanを実行する
 ```
 
 ### ローカルで Google 認証
@@ -106,4 +114,4 @@ make check
 
 ## テスト
 
-Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull Requestでは、GitHub Actionsがローカルと同じ固定PHP 8.2.30・Composer 2.8.12・MySQL 5.7.35で `make check` を実行する。mainにプッシュした場合だけ、テスト結果を[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)へアップし、Slackへ通知する。
+Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull Requestでは、GitHub Actionsがローカルと同じ固定PHP 8.2.30・Composer 2.8.12・MySQL 5.7.35で `make check` を実行する。`make check` はLaravel Pintによるフォーマット確認、PHPStan/Larastanによる静的解析、既存テストを実行するため、フォーマット違反または新規の静的解析違反があるとCIは失敗する。mainにプッシュした場合だけ、テスト結果を[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)へアップし、Slackへ通知する。

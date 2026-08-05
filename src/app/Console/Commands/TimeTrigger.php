@@ -2,51 +2,51 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
+use App\Models\ExecResult;
+use App\Models\OnetimeSkip;
+use App\Models\User;
 use GuzzleHttp\Client;
-use Psr\Http\Message\ResponseInterface;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Pool;
-use App\Models\ExecResult;
-use App\Models\User;
-use App\Models\OnetimeSkip;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Psr\Http\Message\ResponseInterface;
 
 class TimeTrigger extends Command
 {
-  /**
-   * The name and signature of the console command.
-   *
-   * @var string
-   */
-  protected $signature = 'time:trigger';
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'time:trigger';
 
-  /**
-   * The console command description.
-   *
-   * @var string
-   */
-  protected $description = '時間指定でコマンドを実行する';
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = '時間指定でコマンドを実行する';
 
-  /**
-   * Create a new command instance.
-   *
-   * @return void
-   */
-  public function __construct()
-  {
-    parent::__construct();
-  }
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
 
-  /**
-   * Execute the console command.
-   *
-   * @return int
-   */
-  public function handle()
-  {
-    // 実行対象を取得
-    $triggers = DB::select("
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle()
+    {
+        // 実行対象を取得
+        $triggers = DB::select("
       SELECT 
         c.id AS c_id,
         tt.id AS t_id,
@@ -97,114 +97,117 @@ class TimeTrigger extends Command
         AND tt.deleted_at IS NULL
     ");
 
-    foreach ($triggers as $trigger) {
-      if ($trigger->c_id > 0) {
-        continue;
-      }
+        foreach ($triggers as $trigger) {
+            if ($trigger->c_id > 0) {
+                continue;
+            }
 
-      $fcm_users = []; // FCM でサイレントとかにする TODO
-      if ($trigger->target_type == 'group') {
-        $fcm_users = User::where('groups_id', $trigger->target_id)->whereNotNull('fcm_token')->get();
-      } else {
-        $fcm_users = User::where('id', $trigger->target_id)->whereNotNull('fcm_token')->get();
-      }
-
-      unset($trigger);
-    }
-
-    if (empty($triggers)) {
-      return;
-    }
-
-    $client = app(Client::class);
-
-    $requests = function() use ($client, $triggers) {
-      foreach ($triggers as $trigger) {
-        // スキップ対象であれば飛ばす
-        if ($trigger->skip_id !== null) {
-          $skip = OnetimeSkip::find($trigger->skip_id);
-          $skip->deleted_at = date('Y-m-d H:i:s');
-          $skip->save();
-          continue;
-        }
-
-        // 祝日判定
-        $is_holiday = array_key_exists(date('Y-m-d'), app()->make('HolidayList')->getHolidays($trigger->country_code, date('Y')));
-
-        // 個人カレンダーがあった場合はそちらを優先する
-        if ($trigger->user_holiday !== null) {
-          $is_holiday = $trigger->user_holiday;
-        }
-
-        // 曜日を展開
-        $target_weeks = json_decode($trigger->target_week, true);
-
-        // 含めるパターン以外を除外
-        if (!(
-          ($trigger->holiday_decision == 'exec' && $is_holiday) || // 祝日を含める && 祝日
-          ($trigger->holiday_decision == 'not_exec' && !$is_holiday && in_array($trigger->week, $target_weeks, true)) || // 祝日を含めない && !祝日 && 対象曜日
-          ($trigger->holiday_decision == 'not_check' && in_array($trigger->week, $target_weeks, true)) // 祝日判定しない && 対象曜日
-        )) {
-          continue;
-        }
-
-        // 実行
-        yield function() use ($client, $trigger) {
-          $options = [];
-          $options['allow_redirects'] = true;
-
-          $headers = json_decode($trigger->headers, true);
-          if (!empty($headers)) {
-            $options['headers'] = $headers;
-          }
-
-          if (!empty($trigger->parameters)) {
-            $parameter = str_replace('##DATETIME##', date('Y-m-d H:i:s'), $trigger->parameters);
-            if ($trigger->body_type == 'json') {
-              $options[$trigger->body_type] = $parameter;
+            $fcm_users = []; // FCM でサイレントとかにする TODO
+            if ($trigger->target_type == 'group') {
+                $fcm_users = User::where('groups_id', $trigger->target_id)->whereNotNull('fcm_token')->get();
             } else {
-              $options[$trigger->body_type] = json_decode($parameter, true);
+                $fcm_users = User::where('id', $trigger->target_id)->whereNotNull('fcm_token')->get();
             }
-          }
-          $promise = $client->requestAsync($trigger->method, $trigger->url, $options);
-          $promise->then(
-            function(ResponseInterface $res) use ($trigger) {
-              $this->saveResult($trigger, $res);
-            },
-            //Rejected 
-            function(RequestException $e) use ($trigger) {
-              $this->saveResult($trigger, $e->getResponse());
+
+            unset($trigger);
+        }
+
+        if (empty($triggers)) {
+            return;
+        }
+
+        $client = app(Client::class);
+
+        $requests = function () use ($client, $triggers) {
+            foreach ($triggers as $trigger) {
+                // スキップ対象であれば飛ばす
+                if ($trigger->skip_id !== null) {
+                    $skip = OnetimeSkip::find($trigger->skip_id);
+                    $skip->deleted_at = date('Y-m-d H:i:s');
+                    $skip->save();
+
+                    continue;
+                }
+
+                // 祝日判定
+                $is_holiday = array_key_exists(date('Y-m-d'), app()->make('HolidayList')->getHolidays($trigger->country_code, date('Y')));
+
+                // 個人カレンダーがあった場合はそちらを優先する
+                if ($trigger->user_holiday !== null) {
+                    $is_holiday = $trigger->user_holiday;
+                }
+
+                // 曜日を展開
+                $target_weeks = json_decode($trigger->target_week, true);
+
+                // 含めるパターン以外を除外
+                if (! (
+                    ($trigger->holiday_decision == 'exec' && $is_holiday) || // 祝日を含める && 祝日
+                    ($trigger->holiday_decision == 'not_exec' && ! $is_holiday && in_array($trigger->week, $target_weeks, true)) || // 祝日を含めない && !祝日 && 対象曜日
+                    ($trigger->holiday_decision == 'not_check' && in_array($trigger->week, $target_weeks, true)) // 祝日判定しない && 対象曜日
+                )) {
+                    continue;
+                }
+
+                // 実行
+                yield function () use ($client, $trigger) {
+                    $options = [];
+                    $options['allow_redirects'] = true;
+
+                    $headers = json_decode($trigger->headers, true);
+                    if (! empty($headers)) {
+                        $options['headers'] = $headers;
+                    }
+
+                    if (! empty($trigger->parameters)) {
+                        $parameter = str_replace('##DATETIME##', date('Y-m-d H:i:s'), $trigger->parameters);
+                        if ($trigger->body_type == 'json') {
+                            $options[$trigger->body_type] = $parameter;
+                        } else {
+                            $options[$trigger->body_type] = json_decode($parameter, true);
+                        }
+                    }
+                    $promise = $client->requestAsync($trigger->method, $trigger->url, $options);
+                    $promise->then(
+                        function (ResponseInterface $res) use ($trigger) {
+                            $this->saveResult($trigger, $res);
+                        },
+                        // Rejected
+                        function (RequestException $e) use ($trigger) {
+                            $this->saveResult($trigger, $e->getResponse());
+                        }
+                    );
+
+                    return $promise;
+                };
             }
-          );
-          return $promise;
         };
-      }
-    };
 
-    $pool = new Pool($client, $requests());
-    $promise = $pool->promise();
-    $promise->wait();
-  }
-
-  private function saveResult($trigger, ResponseInterface $res) {
-    ExecResult::create([
-      'command_id' => $trigger->c_id,
-      'trigger_id' => $trigger->t_id,
-      'exec_time' => $trigger->exec_time,
-      'response_code' => $res->getStatusCode(),
-      'response_header' => json_encode($res->getHeaders(), true),
-      'response_body' => $res->getBody(),
-    ]);
-
-    // FCM 通知 TODO
-    if ($trigger->exec_notify) {
-      $fcm_users = [];
-      if ($trigger->target_type == 'group') {
-        $fcm_users = User::where('groups_id', $trigger->target_id)->whereNotNull('fcm_token')->get();
-      } else {
-        $fcm_users = User::where('id', $trigger->target_id)->whereNotNull('fcm_token')->get();
-      }
-      "「{$trigger->trigger_name}」によって「{$trigger->command_name}」が実行されました。";
+        $pool = new Pool($client, $requests());
+        $promise = $pool->promise();
+        $promise->wait();
     }
-  }
+
+    private function saveResult($trigger, ResponseInterface $res)
+    {
+        ExecResult::create([
+            'command_id' => $trigger->c_id,
+            'trigger_id' => $trigger->t_id,
+            'exec_time' => $trigger->exec_time,
+            'response_code' => $res->getStatusCode(),
+            'response_header' => json_encode($res->getHeaders(), true),
+            'response_body' => $res->getBody(),
+        ]);
+
+        // FCM 通知 TODO
+        if ($trigger->exec_notify) {
+            $fcm_users = [];
+            if ($trigger->target_type == 'group') {
+                $fcm_users = User::where('groups_id', $trigger->target_id)->whereNotNull('fcm_token')->get();
+            } else {
+                $fcm_users = User::where('id', $trigger->target_id)->whereNotNull('fcm_token')->get();
+            }
+            "「{$trigger->trigger_name}」によって「{$trigger->command_name}」が実行されました。";
+        }
+    }
 }

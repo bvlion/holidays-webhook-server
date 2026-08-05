@@ -1,0 +1,25 @@
+includes:
+    - ./vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    # Eloquentモデルに @property docblock を持たせておらず、マイグレーションも
+    # 存在しない(スキーマはdocker/db/sql/*.sqlで作成)ため、レベル2以降は動的
+    # プロパティに対する大量の「未定義プロパティ」検出になり、現状はモデルへの
+    # 型注釈追加という大規模な変更なしには解消できない。そのため現状のコード
+    # ベースに適したレベル1から開始する。
+    level: 1
+    paths:
+        - app
+        - database/factories
+        - database/seeders
+        - routes
+        - tests
+    excludePaths:
+        # Laravel標準の雛形そのままで独自ロジックが無く、Artisanのクロージャー
+        # コマンドに動的にバインドされる $this をPHPStanが解決できない既知の
+        # 制約のみが起きるため除外する。
+        - routes/console.php
+    # モデルにDBスキーマ由来の型情報が無い現状では正しく判定できないため、
+    # Larastanの厳密なモデルプロパティ検証は既定値どおり無効にしておく。
+    checkModelProperties: false

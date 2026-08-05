@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ExecResult extends Model
 {
     use HasFactory;
-    
+
     protected $guarded = ['id'];
 
     protected $hidden = ['deleted_at'];

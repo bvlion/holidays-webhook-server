@@ -36,7 +36,7 @@ class ExecResultsControllerTest extends TestCase
             'response_body' => 'ok',
         ]);
 
-        $response = $this->actingAs($user, 'api')->getJson('/api/exec/result/' . $trigger->id);
+        $response = $this->actingAs($user, 'api')->getJson('/api/exec/result/'.$trigger->id);
 
         $response->assertStatus(200);
         $result = $response->json()[0];
@@ -46,7 +46,7 @@ class ExecResultsControllerTest extends TestCase
         $this->assertSame('2026-01-01 09:00:00', $result['exec_time']);
     }
 
-    public function test_負のコマンドIDは端末モード名へ変換される()
+    public function test_負のコマンド_i_dは端末モード名へ変換される()
     {
         $user = User::factory()->create();
         $trigger = TimeTrigger::factory()->create([
@@ -60,7 +60,7 @@ class ExecResultsControllerTest extends TestCase
             'trigger_id' => $trigger->id,
         ]);
 
-        $response = $this->actingAs($user, 'api')->getJson('/api/exec/result/' . $trigger->id);
+        $response = $this->actingAs($user, 'api')->getJson('/api/exec/result/'.$trigger->id);
 
         $response->assertStatus(200);
         $this->assertSame('マナーモード', $response->json()[0]['command_name']);
@@ -77,12 +77,12 @@ class ExecResultsControllerTest extends TestCase
             'command_id' => $command->id,
         ]);
 
-        $response = $this->actingAs($other, 'api')->getJson('/api/exec/result/' . $trigger->id);
+        $response = $this->actingAs($other, 'api')->getJson('/api/exec/result/'.$trigger->id);
 
         $response->assertStatus(403);
     }
 
-    public function test_存在しないトリガーIDの結果取得は現状エラーになる()
+    public function test_存在しないトリガー_i_dの結果取得は現状エラーになる()
     {
         // CommandsControllerTest と同様、find() が null を返した後に
         // null のプロパティを読むため警告が例外化され処理が止まる現行仕様の回帰テスト。

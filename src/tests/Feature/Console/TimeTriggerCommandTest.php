@@ -35,7 +35,7 @@ class TimeTriggerCommandTest extends TestCase
     private function freezeDatabaseNow(string $jstDateTime = self::FIXED_JST_DATETIME): void
     {
         $timestamp = Carbon::createFromFormat('Y-m-d H:i:s', $jstDateTime, 'Asia/Tokyo')->getTimestamp();
-        DB::statement('SET timestamp = ' . $timestamp);
+        DB::statement('SET timestamp = '.$timestamp);
     }
 
     private function mysqlDayOfWeek(string $jstDateTime = self::FIXED_JST_DATETIME): int
@@ -55,7 +55,7 @@ class TimeTriggerCommandTest extends TestCase
         $today = date('Y-m-d');
         $year = date('Y');
         $fake = new FakeHolidayList([
-            $countryCode . $year => $isHoliday ? [$today => 'テスト祝日'] : [],
+            $countryCode.$year => $isHoliday ? [$today => 'テスト祝日'] : [],
         ]);
         $this->app->instance('HolidayList', $fake);
     }
@@ -157,7 +157,7 @@ class TimeTriggerCommandTest extends TestCase
         $this->assertSame(0, ExecResult::where('trigger_id', $trigger->id)->count());
     }
 
-    public function test_個人カレンダーの祝日上書きはGoogle_Calendarの判定より優先される()
+    public function test_個人カレンダーの祝日上書きは_google_calendarの判定より優先される()
     {
         // DB側で固定した日付(target_date)は、PHPサーバーの実日付を使うGoogle Calendar側の
         // 判定基準日とは独立している(docs/current-architecture.md 10.1)。
@@ -297,7 +297,7 @@ class TimeTriggerCommandTest extends TestCase
         $this->assertSame(1, ExecResult::where('trigger_id', $trigger->id)->count());
     }
 
-    public function test_トリガーのタイムゾーンがAsia_Tokyoと異なる場合も判定に反映される()
+    public function test_トリガーのタイムゾーンが_asia_tokyoと異なる場合も判定に反映される()
     {
         // DBの現在時刻は常に+09:00として保持される前提のため、+05:00のトリガーは
         // 対象タイムゾーンへ変換した時刻(+09:00の4時間前)で時間帯を判定する。

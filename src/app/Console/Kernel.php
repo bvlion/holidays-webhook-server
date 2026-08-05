@@ -13,15 +13,14 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        Commands\UpdateHolidayCache::Class,
-        Commands\TimeTrigger::Class,
-        Commands\DeleteOldExecResultCommand::Class,
+        Commands\UpdateHolidayCache::class,
+        Commands\TimeTrigger::class,
+        Commands\DeleteOldExecResultCommand::class,
     ];
 
     /**
      * Define the application's command schedule.
      *
-     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
      * @return void
      */
     protected function schedule(Schedule $schedule)
