@@ -11,10 +11,19 @@ DOCKER_COMPOSE = docker compose -p $(DEV_PROJECT)
 # 実行する。開発用のcontainer・network・volume・host portには一切触れない。
 CHECK_COMPOSE = docker compose -f docker-compose.check.yml -p $(CHECK_PROJECT)
 
+# PHP 8.5互換確認専用（Issue #215）のCompose project名。開発用・通常の検証用
+# （$(CHECK_PROJECT)）のどちらとも異なる名前にし、container・network・volumeが
+# 混ざらないようにする。
+CHECK_PHP85_PROJECT = holidays-webhook-server-check-php85
+# docker-compose.check.yml（db・db-checkはPHP 8.2.30と共通のまま再利用）に
+# docker-compose.check-php85.yml（webのビルド引数PHP_IMAGEだけ上書き）を
+# 重ねる。host portは公開せず、DB用named volumeも持たない（$(CHECK_COMPOSE)と同様）。
+CHECK_PHP85_COMPOSE = docker compose -f docker-compose.check.yml -f docker-compose.check-php85.yml -p $(CHECK_PHP85_PROJECT)
+
 BACKUP_DIR = backups
 BACKUP_FILE = $(BACKUP_DIR)/hw-$(shell date +%Y%m%d%H%M%S).sql
 
-.PHONY: setup environment local-environment-guard up stop rebuild test check check-clean db-backup db-restore db-wipe
+.PHONY: setup environment local-environment-guard up stop rebuild test check check-php85 check-clean check-php85-clean db-backup db-restore db-wipe
 
 setup: local-environment-guard
 	$(DOCKER_COMPOSE) build web db db-check
@@ -109,6 +118,48 @@ check: local-environment-guard
 # だけを対象とし、開発用のcontainer・network・volumeには触れない。
 check-clean:
 	$(CHECK_COMPOSE) down --volumes --remove-orphans
+
+# PHP 8.5系の互換確認（Issue #215）。開発用・通常の検証用（$(CHECK_PROJECT)）の
+# どちらにも一切触れず、専用のCompose project（$(CHECK_PHP85_PROJECT)）だけを
+# 使う。
+#
+# 現行のLaravel 8・依存関係（nette/schema・nette/utils）はPHP 8.5を正式サポート
+# していないため、`composer install`はIssue #216で追跡している既知の理由で失敗
+# する状態が現状である。この既知の状態「だけ」であることを
+# `scripts/php85-compat-check.php`（`composer why-not php <version> --locked`の
+# 構造化出力を根拠に判定）で機械的に確認できた場合に限り、bootstrap以降を
+# 未実施のまま成功として終了する。それ以外の失敗（環境構築自体の失敗、想定外の
+# 非互換、ネットワーク障害等）は`continue-on-error`等で隠さず、通常どおり失敗
+# させる。既知の非互換が解消された場合は`composer install`が成功するため、
+# 以降のbootstrap・DB seed・静的解析・テストまで自動的に実行される。
+check-php85: local-environment-guard
+	trap '$(CHECK_PHP85_COMPOSE) down --volumes --remove-orphans' EXIT; \
+	$(CHECK_PHP85_COMPOSE) build web db db-check && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web php --version && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web composer --version && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web php -r 'exit(array_diff(["pdo_mysql", "intl", "gd", "zip"], get_loaded_extensions()) === [] ? 0 : 1);' || exit 1; \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web php scripts/php85-compat-check.php; \
+	compat_status=$$?; \
+	if [ $$compat_status -eq 2 ]; then \
+		echo "[check-php85] Issue #216で追跡中の既知のPHP 8.5非互換だけを検出したため、bootstrap以降は未実施のまま成功として終了します。" >&2; \
+		exit 0; \
+	fi; \
+	if [ $$compat_status -ne 0 ]; then \
+		echo "[check-php85] composer installが、既知の非互換(Issue #216)以外の理由、または未知の理由で失敗しました。" >&2; \
+		exit 1; \
+	fi; \
+	$(CHECK_PHP85_COMPOSE) up --detach web db && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps db-check && \
+	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php artisan db:seed --force && \
+	$(CHECK_PHP85_COMPOSE) config --quiet && \
+	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check-platform-reqs --no-dev && \
+	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check
+
+# make check-php85 が失敗などで異常終了した場合の手動cleanup用。PHP 8.5検証専用
+# projectだけを対象とし、開発用・通常の検証用のcontainer・network・volumeには
+# 触れない。
+check-php85-clean:
+	$(CHECK_PHP85_COMPOSE) down --volumes --remove-orphans
 
 # 開発用DBを mysqldump でバックアップする。$(BACKUP_DIR) はGit管理対象外。
 # mysqldumpの出力はいったん $(BACKUP_DIR) 内の一時ファイルへ書き出し、
