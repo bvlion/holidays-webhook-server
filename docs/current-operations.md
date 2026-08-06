@@ -194,9 +194,9 @@ rsyncでは次を転送対象から除外する。
 
 リポジトリ上の条件は次のとおりである。
 
-- `composer.json`: PHP `^8.1`（Issue #217のLaravel 10更新に伴い`^8.0.2`から変更。Composer上の要件であり、本番・開発用DockerのPHPは引き続き8.2.30のまま）
+- `composer.json`: PHP `^8.2`（Issue #218のLaravel 11更新に伴い`^8.1`から変更。Composer上の要件であり、本番・開発用DockerのPHPは引き続き8.2.30のまま）
 - ローカルDocker: PHP 8.2.30 + Apache
-- `composer.lock`: Laravel Framework 10.50.2（Issue #217でLaravel 9.52.21から更新）
+- `composer.lock`: Laravel Framework 11.55.0（Issue #218でLaravel 10.50.2から更新）
 
 リポジトリ上の条件も、公開経路から本番のPHPバージョンと実行方式を証明するものではない。
 
