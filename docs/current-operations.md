@@ -97,6 +97,17 @@ Issue #213の作業中、一時的な `docker-compose.override.yml` を使って
 
 `web`・`db`・`db-check` のbuild対象・環境変数・`src`／`docker/db/sql`等のマウント内容は開発用と同じにしてあり、検証結果が開発環境と乖離しないようにしている。
 
+### 2.8 PHP 8.5互換確認環境（`make check-php85`）
+
+本番・開発用のPHPは引き続き8.2.30のままだが、将来のPHP 8.5移行に向けた互換確認環境を追加した（Issue #215）。`docker/web/Dockerfile` はビルド引数 `PHP_IMAGE`（既定値 `php:8.2.30-apache`、ファイル自体は変更しない）で切り替え可能にし、`docker-compose.check.yml` に `docker-compose.check-php85.yml` を重ねて `PHP_IMAGE=php:8.5.9-apache` を上書きすることで、`db`・`db-check`（MySQL 5.7.35）は共通のまま `web` だけPHP 8.5系にした専用環境（Compose project `holidays-webhook-server-check-php85`）を構築する。手順は `make check` と同一（`check-php85`）で、開発用・`make check` 用のどちらの環境にも一切触れない。
+
+隔離環境で実際に確認した結果、次の状態である。
+
+- イメージのビルド、`pdo_mysql`・`intl`・`gd`・`zip`・`xdebug` の各拡張導入、`php --version`（8.5.9）・`composer --version`（2.8.12）の確認、`composer validate --strict`、`composer:audit`（監査ラッパー経由、44件baseline）はいずれもPHP 8.5.9で成功する。
+- `composer check-platform-reqs` は、`nette/schema`（`league/commonmark`→`league/config`経由の間接依存、ロック済みバージョンが `php 8.1 - 8.4` までしか宣言していない）が原因で失敗する。
+- 上記と同じ理由で `composer install`（`make check-php85` の最初の実質的なステップ）が失敗し、それ以降（Laravel bootstrap・migration・`composer:prod-check`・Pint・PHPStan/Larastan・PHPUnit）は現時点では検証できていない。
+- この問題はアプリケーションコードではなく依存パッケージ側（`nette/schema`・`nette/utils`）に起因し、両パッケージともPHP 8.5をサポートする新しいタグ付きリリースが既に存在することを確認済み。対応方針の詳細はIssue #216へのコメントを参照。
+
 ## 3. 継続的インテグレーション
 
 `.github/workflows/test.yaml` は次のイベントを対象とする。
@@ -113,6 +124,7 @@ Dependabotを含めて通常のpull requestを使い、Pull Requestのコード�
 5. `make check` は、成功・失敗にかかわらず検証専用のCompose projectだけを対象に `docker compose down --volumes --remove-orphans` を実行して後処理する（Makefile内の`trap`によるcleanupで、workflow側からは呼ばない）。開発用の構成は元々このworkflow上に存在しないため影響しない。
 6. mainへのpushでは、テストレポートをartifactで公開jobへ渡し、`gh-pages` ブランチへ配置する。
 7. mainへのpushでは、テストとレポート公開の結果をSlackへ通知する。
+8. 上記1〜7とは別に、`php85-compat` ジョブが専用のCompose project（`holidays-webhook-server-check-php85`）で `make check-php85`（2.8節）を実行する（Issue #215）。このジョブは `test`・テストレポート公開・Slack通知（`notify`）のいずれの `needs` にも含まれておらず、失敗しても他のジョブの成否やSlack通知の内容に影響しない（non-blocking）。現行のLaravel 8・依存関係がPHP 8.5を正式サポートしていないことに由来する既知の失敗であり、`continue-on-error` 等で結果を隠さず、CIの実行結果画面から個別に確認できるようにしている。
 
 Pull Requestで実行するテストjobはリポジトリ内容の読み取り権限だけを持ち、Secretを使用しない。`gh-pages` への書き込み権限はmainへのpushでだけ実行する公開jobに限定する。
 

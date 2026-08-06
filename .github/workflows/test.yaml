@@ -52,6 +52,34 @@ jobs:
           name: test-report
           path: report
 
+  # PHP 8.5系の互換確認（Issue #215）。本番はまだPHP 8.2.30のままで、この
+  # ジョブは`test`ジョブとは独立させ、`publish-test-report`・`notify`の
+  # `needs`にも含めない。現行のLaravel 8・依存関係（nette/schema・nette/utils
+  # がPHPの上限を8.4までしか宣言していない等）はPHP 8.5を正式サポートしておらず、
+  # 本Issueの時点でこのジョブが失敗することは想定内であるため、CI全体や
+  # Slack通知の成功判定をこのジョブの結果で左右させない（non-blocking）。
+  # ただし継続的にCI画面上で結果を確認できるよう、push/pull_requestの両方で
+  # 実行し、`continue-on-error`や`|| true`等で失敗を隠さない。
+  php85-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: cache composer vendor (php8.5)
+        uses: actions/cache@v4
+        with:
+          path: ./src/vendor
+          key: ${{ runner.os }}-composer-php85-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-php85-
+
+      # PHP 8.2.30向けの`make check`と同じ手順を、`docker-compose.check.yml`に
+      # `docker-compose.check-php85.yml`を重ねた専用のCompose project
+      # （holidays-webhook-server-check-php85）でだけ実行する。
+      - name: make check-php85
+        run: make check-php85
+
   publish-test-report:
     if: ${{ github.event_name == 'push' }}
     needs: test

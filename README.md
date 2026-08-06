@@ -117,6 +117,19 @@ make db-wipe CONFIRM=yes
 - 検証用DBはnamed volumeを持たない使い捨てで、`make check` の成功・失敗にかかわらず、検証用Compose projectだけを対象にcleanup（`docker compose down --volumes --remove-orphans`）する。
 - 一時的な `docker-compose.override.yml` は使用しない。検証用の構成は `docker-compose.check.yml` としてリポジトリに含まれている。
 
+### PHP 8.5互換確認環境（`make check-php85`）
+
+本番・開発用は引き続きPHP 8.2.30を使用する。将来のPHP 8.5移行に向けて、`make check`と同じ手順をPHP 8.5系（`php:8.5.9-apache`、固定パッチバージョン）だけで実行できる環境を追加している（Issue #215）。
+
+```shell
+make check-php85
+```
+
+- `docker/web/Dockerfile` は変更せず、ビルド引数 `PHP_IMAGE` の上書き（`docker-compose.check-php85.yml`、`docker-compose.check.yml` と組み合わせて使う）だけでPHP 8.5イメージを再利用する。`db`・`db-check`（MySQL 5.7.35）は`make check`と共通のまま。
+- 専用のCompose project（`holidays-webhook-server-check-php85`）を使い、開発用・`make check`用のどちらのcontainer・network・volume・host portにも一切触れない。
+- 現在のLaravel 8・依存関係（`nette/schema`・`nette/utils`など）はPHP 8.5を正式サポートしていないため、`make check-php85` は途中の処理（`composer install`）で失敗する状態が既知である。この状態を隠さず、失敗した場合もcleanupだけは行う。詳細・原因の切り分けはIssue #215のPull Requestを参照。
+- 異常終了などでcleanupが行われなかった場合は `make check-php85-clean` で検証専用projectだけを片付けられる。
+
 ### テスト
 
 ```shell
@@ -173,3 +186,5 @@ composer analyse             # PHPStan/Larastanを実行する
 ## テスト
 
 Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull Requestでは、GitHub Actionsがローカルと同じ固定PHP 8.2.30・Composer 2.8.12・MySQL 5.7.35で `make check` を実行する。`make check` はLaravel Pintによるフォーマット確認、PHPStan/Larastanによる静的解析、既存テストを実行するため、フォーマット違反または新規の静的解析違反があるとCIは失敗する。mainにプッシュした場合だけ、テスト結果を[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)へアップし、Slackへ通知する。
+
+同じワークフロー内で `php85-compat` ジョブが `make check-php85`（PHP 8.5系での互換確認、前述）を実行する（Issue #215）。このジョブは `test`・`publish-test-report`・`notify`（Slack通知）のいずれの`needs`にも含まれておらず、現時点で失敗しても他のジョブやSlack通知の成否には影響しない（non-blocking）。現行のLaravel 8・依存関係がPHP 8.5を正式サポートしていないための既知の失敗であり、結果はCIの実行結果画面から個別に確認できる。

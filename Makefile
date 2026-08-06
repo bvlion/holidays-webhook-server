@@ -11,10 +11,19 @@ DOCKER_COMPOSE = docker compose -p $(DEV_PROJECT)
 # 実行する。開発用のcontainer・network・volume・host portには一切触れない。
 CHECK_COMPOSE = docker compose -f docker-compose.check.yml -p $(CHECK_PROJECT)
 
+# PHP 8.5互換確認専用（Issue #215）のCompose project名。開発用・通常の検証用
+# （$(CHECK_PROJECT)）のどちらとも異なる名前にし、container・network・volumeが
+# 混ざらないようにする。
+CHECK_PHP85_PROJECT = holidays-webhook-server-check-php85
+# docker-compose.check.yml（db・db-checkはPHP 8.2.30と共通のまま再利用）に
+# docker-compose.check-php85.yml（webのビルド引数PHP_IMAGEだけ上書き）を
+# 重ねる。host portは公開せず、DB用named volumeも持たない（$(CHECK_COMPOSE)と同様）。
+CHECK_PHP85_COMPOSE = docker compose -f docker-compose.check.yml -f docker-compose.check-php85.yml -p $(CHECK_PHP85_PROJECT)
+
 BACKUP_DIR = backups
 BACKUP_FILE = $(BACKUP_DIR)/hw-$(shell date +%Y%m%d%H%M%S).sql
 
-.PHONY: setup environment local-environment-guard up stop rebuild test check check-clean db-backup db-restore db-wipe
+.PHONY: setup environment local-environment-guard up stop rebuild test check check-php85 check-clean check-php85-clean db-backup db-restore db-wipe
 
 setup: local-environment-guard
 	$(DOCKER_COMPOSE) build web db db-check
@@ -109,6 +118,31 @@ check: local-environment-guard
 # だけを対象とし、開発用のcontainer・network・volumeには触れない。
 check-clean:
 	$(CHECK_COMPOSE) down --volumes --remove-orphans
+
+# PHP 8.5系の互換確認（Issue #215）。開発用・通常の検証用（$(CHECK_PROJECT)）の
+# どちらにも一切触れず、専用のCompose project（$(CHECK_PHP85_PROJECT)）だけを
+# 使う。手順・チェック内容は`check`と同一で、PHPイメージだけが異なる。
+# 現行のLaravel 8・依存関係はPHP 8.5を正式サポートしていないため、途中の
+# いずれかのステップで失敗しうる（意図的に握り潰さない。失敗時もcleanupだけは行う）。
+check-php85: local-environment-guard
+	trap '$(CHECK_PHP85_COMPOSE) down --volumes --remove-orphans' EXIT; \
+	$(CHECK_PHP85_COMPOSE) build web db db-check && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web composer install --no-interaction --prefer-dist && \
+	$(CHECK_PHP85_COMPOSE) up --detach web db && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps db-check && \
+	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php artisan db:seed --force && \
+	$(CHECK_PHP85_COMPOSE) config --quiet && \
+	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php --version && \
+	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer --version && \
+	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php -r 'exit(array_diff(["pdo_mysql", "intl", "gd", "zip"], get_loaded_extensions()) === [] ? 0 : 1);' && \
+	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check-platform-reqs --no-dev && \
+	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check
+
+# make check-php85 が失敗などで異常終了した場合の手動cleanup用。PHP 8.5検証専用
+# projectだけを対象とし、開発用・通常の検証用のcontainer・network・volumeには
+# 触れない。
+check-php85-clean:
+	$(CHECK_PHP85_COMPOSE) down --volumes --remove-orphans
 
 # 開発用DBを mysqldump でバックアップする。$(BACKUP_DIR) はGit管理対象外。
 # mysqldumpの出力はいったん $(BACKUP_DIR) 内の一時ファイルへ書き出し、
