@@ -99,7 +99,7 @@ Issue #213の作業中、一時的な `docker-compose.override.yml` を使って
 
 ### 2.8 PHP 8.5互換確認環境（`make check-php85`）
 
-本番・開発用のPHPは引き続き8.2.30のままだが、将来のPHP 8.5移行に向けた互換確認環境を追加した（Issue #215）。`docker/web/Dockerfile` はビルド引数 `PHP_IMAGE`（既定値 `php:8.2.30-apache`、ファイル自体は変更しない）で切り替え可能にし、`docker-compose.check.yml` に `docker-compose.check-php85.yml` を重ねて `PHP_IMAGE=php:8.5.9-apache` を上書きすることで、`db`・`db-check`（MySQL 5.7.35）は共通のまま `web` だけPHP 8.5系にした専用環境（Compose project `holidays-webhook-server-check-php85`）を構築する。手順は `make check` と同一（`check-php85`）で、開発用・`make check` 用のどちらの環境にも一切触れない。
+本番・開発用のPHPは引き続き8.2.30のままだが、将来のPHP 8.5移行に向けた互換確認環境を追加した（Issue #215）。`docker/web/Dockerfile` はビルド引数 `PHP_IMAGE`（既定値 `php:8.2.30-apache`、ファイル自体は変更しない）で切り替え可能にし、`docker-compose.check.yml` に `docker-compose.check-php85.yml` を重ねて `PHP_IMAGE=php:8.5.9-apache` を上書きすることで、`db`・`db-check`（MySQL 5.7.35）は共通のまま `web` だけPHP 8.5系にした専用環境（Compose project `holidays-webhook-server-check-php85`）を構築する。基本的な検証フローは `make check` と同じだが、`check-php85` では `composer install` より前に、PHP 8.5.9の完全一致・Composerの実行可否・必要拡張（`pdo_mysql`・`intl`・`gd`・`zip`）の読み込みを専用コンテナ（`run --rm --no-deps`）で確認する。すべて確認できたら `composer install` → `web`/`db` 起動 → DB seed → `composer check-platform-reqs --no-dev` → `composer check` まで実行する。開発用・`make check` 用のどちらの環境にも一切触れない。
 
 Issue #215時点では、Laravel 8・依存関係（`nette/schema v1.3.2`・`nette/utils v4.0.5`。いずれもPHP上限が8.4）がPHP 8.5を正式サポートしておらず、`composer install`が失敗していた。この既知の非互換だけを検出した場合に後続を未実施のまま成功扱いにする一時的な判定処理（`src/scripts/php85-compat-check.php`）を経由していたが、Issue #216のLaravel 9更新でこれらの間接依存がPHP 8.5対応版（`nette/schema v1.3.5`・`nette/utils v4.1.5`）へ更新され、`composer install`がPHP 8.5.9でも成功するようになったため、一時的な処理は撤去した。
 
@@ -121,7 +121,7 @@ Dependabotを含めて通常のpull requestを使い、Pull Requestのコード�
 5. `make check` は、成功・失敗にかかわらず検証専用のCompose projectだけを対象に `docker compose down --volumes --remove-orphans` を実行して後処理する（Makefile内の`trap`によるcleanupで、workflow側からは呼ばない）。開発用の構成は元々このworkflow上に存在しないため影響しない。
 6. mainへのpushでは、テストレポートをartifactで公開jobへ渡し、`gh-pages` ブランチへ配置する。
 7. mainへのpushでは、テストとレポート公開の結果をSlackへ通知する。
-8. 上記1〜7とは別に、`php85-compat` ジョブが専用のCompose project（`holidays-webhook-server-check-php85`）で `make check-php85`（2.8節）を実行する（Issue #215）。`test`・テストレポート公開・Slack通知（`notify`）のいずれの `needs` にも含まれておらず、PHP 8.2.30側の検証結果とは独立に確認できる。Issue #216のLaravel 9更新以降は`make check`と同じ通常のフローで実行しており、一時的な既知非互換判定処理は使用していない。
+8. 上記1〜7とは別に、`php85-compat` ジョブが専用のCompose project（`holidays-webhook-server-check-php85`）で `make check-php85`（2.8節）を実行する（Issue #215）。`test`・テストレポート公開・Slack通知（`notify`）のいずれの `needs` にも含まれておらず、PHP 8.2.30側の検証結果とは独立に確認できる。Issue #216のLaravel 9更新以降は、`composer install`より前にPHP 8.5.9の完全一致・Composerの実行可否・必要拡張の読み込みを確認したうえで、`composer install`から`composer check`まで実行する通常のフローで実行しており、一時的な既知非互換判定処理は使用していない。
 
 Pull Requestで実行するテストjobはリポジトリ内容の読み取り権限だけを持ち、Secretを使用しない。`gh-pages` への書き込み権限はmainへのpushでだけ実行する公開jobに限定する。
 
