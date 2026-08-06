@@ -21,8 +21,8 @@ $app = new Application(
 );
 
 // Laravel 11で追加されたフレームワーク既定config(vendor/laravel/framework/config/*.php)の
-// 自動マージ機能を無効化する。本アプリはLaravel 10形式のまま全設定ファイルを明示的に
-// 持っており、この機能はconfigファイルを省略する新スケルトン向けのため不要。
+// 自動マージ機能を無効化する。本アプリはLaravel 10形式のまま利用する設定ファイルを
+// 明示的に持っており、この機能はconfigファイルを省略する新スケルトン向けのため不要。
 // マージすると未対応(PHP 8.5でPDO::MYSQL_ATTR_SSL_CAが非推奨)なvendor側database.phpが
 // 全リクエストで評価され、PHP 8.5でdeprecation通知が発生するため、明示的に無効化する。
 $app->dontMergeFrameworkConfiguration();
