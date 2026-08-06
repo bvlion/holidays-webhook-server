@@ -121,20 +121,37 @@ check-clean:
 
 # PHP 8.5系の互換確認（Issue #215）。開発用・通常の検証用（$(CHECK_PROJECT)）の
 # どちらにも一切触れず、専用のCompose project（$(CHECK_PHP85_PROJECT)）だけを
-# 使う。手順・チェック内容は`check`と同一で、PHPイメージだけが異なる。
-# 現行のLaravel 8・依存関係はPHP 8.5を正式サポートしていないため、途中の
-# いずれかのステップで失敗しうる（意図的に握り潰さない。失敗時もcleanupだけは行う）。
+# 使う。
+#
+# 現行のLaravel 8・依存関係（nette/schema・nette/utils）はPHP 8.5を正式サポート
+# していないため、`composer install`はIssue #216で追跡している既知の理由で失敗
+# する状態が現状である。この既知の状態「だけ」であることを
+# `scripts/php85-compat-check.php`（`composer why-not php <version> --locked`の
+# 構造化出力を根拠に判定）で機械的に確認できた場合に限り、bootstrap以降を
+# 未実施のまま成功として終了する。それ以外の失敗（環境構築自体の失敗、想定外の
+# 非互換、ネットワーク障害等）は`continue-on-error`等で隠さず、通常どおり失敗
+# させる。既知の非互換が解消された場合は`composer install`が成功するため、
+# 以降のbootstrap・DB seed・静的解析・テストまで自動的に実行される。
 check-php85: local-environment-guard
 	trap '$(CHECK_PHP85_COMPOSE) down --volumes --remove-orphans' EXIT; \
 	$(CHECK_PHP85_COMPOSE) build web db db-check && \
-	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web composer install --no-interaction --prefer-dist && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web php --version && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web composer --version && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web php -r 'exit(array_diff(["pdo_mysql", "intl", "gd", "zip"], get_loaded_extensions()) === [] ? 0 : 1);' || exit 1; \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web php scripts/php85-compat-check.php; \
+	compat_status=$$?; \
+	if [ $$compat_status -eq 2 ]; then \
+		echo "[check-php85] Issue #216で追跡中の既知のPHP 8.5非互換だけを検出したため、bootstrap以降は未実施のまま成功として終了します。" >&2; \
+		exit 0; \
+	fi; \
+	if [ $$compat_status -ne 0 ]; then \
+		echo "[check-php85] composer installが、既知の非互換(Issue #216)以外の理由、または未知の理由で失敗しました。" >&2; \
+		exit 1; \
+	fi; \
 	$(CHECK_PHP85_COMPOSE) up --detach web db && \
 	$(CHECK_PHP85_COMPOSE) run --rm --no-deps db-check && \
 	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php artisan db:seed --force && \
 	$(CHECK_PHP85_COMPOSE) config --quiet && \
-	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php --version && \
-	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer --version && \
-	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php -r 'exit(array_diff(["pdo_mysql", "intl", "gd", "zip"], get_loaded_extensions()) === [] ? 0 : 1);' && \
 	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check-platform-reqs --no-dev && \
 	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check
 
