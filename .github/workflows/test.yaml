@@ -98,15 +98,16 @@ jobs:
             elif grep -q '\[php85-compat-check\] Issue #216で追跡中の既知のPHP 8.5非互換だけを検出しました。' php85-check.log; then
               echo "- PHP 8.5.9環境の構築: 成功"
               echo "- 必要拡張（pdo_mysql・intl・gd・zip）の確認: 成功"
+              echo "- composer validate --strict: 成功"
               echo "- 依存関係インストール（composer install）: **未完了**（下記の既知の非互換のため）"
               echo
               echo "### 検出した既知の阻害パッケージ（Issue #216で追跡中）"
               echo '```'
-              sed -n '/\[php85-compat-check\] Issue #216で追跡中の既知のPHP 8.5非互換だけを検出しました。/,/^\[php85-compat-check\] composer install が完了していないため/p' php85-check.log | sed '1d;$d'
+              sed -n '/\[php85-compat-check\] KNOWN_INCOMPATIBLE_PACKAGES_BEGIN/,/\[php85-compat-check\] KNOWN_INCOMPATIBLE_PACKAGES_END/p' php85-check.log | sed '1d;$d'
               echo '```'
               echo
-              echo "- 未実施: Laravel bootstrap・DB seed・composer:validate・composer:audit・composer:prod-check・Laravel Pint・PHPStan(Larastan)・PHPUnit"
-              echo "- 上記が既知の状態から変化した場合（対象パッケージ・バージョンの不一致、想定外の失敗理由等）は、このジョブ自体が失敗する。"
+              echo "- 未実施: Laravel bootstrap・DB seed・composer:audit・composer:prod-check・Laravel Pint・PHPStan(Larastan)・PHPUnit"
+              echo "- 上記が既知の状態から変化した場合（対象パッケージ・バージョンの不一致、PHP制約の変化、想定外の失敗理由等）は、このジョブ自体が失敗する。"
             elif grep -q '\[php85-compat-check\] composer install に成功しました。' php85-check.log; then
               echo "- composer install に成功しました。bootstrap・DB seed・静的解析・テストまで通常どおり実行しています（詳細はジョブのログを参照）。"
             else

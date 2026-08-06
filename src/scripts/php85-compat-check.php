@@ -154,11 +154,16 @@ try {
         fail('composer installの失敗原因（パッケージ名・バージョン・PHP制約）が、Issue #216で追跡している既知の非互換と完全には一致しませんでした。新規または変化した非互換の可能性があるため、未知の失敗として扱います。');
     }
 
+    // GitHub ActionsのStep Summary生成が、メッセージ文言の変化に影響されず
+    // 阻害パッケージ一覧だけを機械的に抽出できるよう、専用の開始・終了
+    // マーカー行で挟んで出力する。マーカー行自体は一覧に含めない。
     fwrite(STDOUT, '[php85-compat-check] Issue #216で追跡中の既知のPHP 8.5非互換だけを検出しました。'.PHP_EOL);
+    fwrite(STDOUT, '[php85-compat-check] KNOWN_INCOMPATIBLE_PACKAGES_BEGIN'.PHP_EOL);
     foreach ($found as $name => $info) {
         fwrite(STDOUT, sprintf('  - %s %s requires php (%s)'.PHP_EOL, $name, $info['version'], $info['phpConstraint']));
     }
-    fwrite(STDOUT, '[php85-compat-check] composer validate --strict は成功しましたが、composer install が完了していないため、Laravel bootstrap・DB seed・composer:audit・composer:prod-check・Laravel Pint・PHPStan(Larastan)・PHPUnitは未実施です。'.PHP_EOL);
+    fwrite(STDOUT, '[php85-compat-check] KNOWN_INCOMPATIBLE_PACKAGES_END'.PHP_EOL);
+    fwrite(STDOUT, '[php85-compat-check] composer validate --strict は成功しました。composer install が完了していないため、Laravel bootstrap・DB seed・composer:audit・composer:prod-check・Laravel Pint・PHPStan(Larastan)・PHPUnitは未実施です。'.PHP_EOL);
 
     exit(2);
 } catch (Throwable $e) {
