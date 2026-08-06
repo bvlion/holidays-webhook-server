@@ -127,13 +127,7 @@ make check-php85
 
 - `docker/web/Dockerfile` は変更せず、ビルド引数 `PHP_IMAGE` の上書き（`docker-compose.check-php85.yml`、`docker-compose.check.yml` と組み合わせて使う）だけでPHP 8.5イメージを再利用する。`db`・`db-check`（MySQL 5.7.35）は`make check`と共通のまま。
 - 専用のCompose project（`holidays-webhook-server-check-php85`）を使い、開発用・`make check`用のどちらのcontainer・network・volume・host portにも一切触れない。
-- 現在のLaravel 8・依存関係（`nette/schema v1.3.2`・`nette/utils v4.0.5`。いずれもPHP上限が8.4）はPHP 8.5を正式サポートしていない。`src/scripts/php85-compat-check.php`が、次をすべて満たす場合に限り「Issue #216で追跡中の既知の非互換」と機械的に判定し、`make check-php85`はこの場合**成功（exit 0）** で終える。
-  - `composer validate --strict` が成功している（Composer設定・composer.lockの不整合ではない）
-  - `composer install` が失敗している
-  - `composer why-not php <実行中のPHPバージョン> --locked` が終了コード1・想定どおりの標準エラーで終了し、その標準出力から抽出した「パッケージ名・ロック済みバージョン・PHP制約」の組が、上記2パッケージと**完全一致**する
-  - 上記のいずれか1つでも一致しない場合（新規の非互換、PHP制約の変化、ネットワーク障害、Composer設定不整合等）は、既知の状態ではない**未知の失敗**として `make check-php85` を失敗させる。
-  - 既知の非互換が解消され `composer install` が成功すれば、bootstrap・DB seed・`composer:validate`/`composer:audit`/`composer:prod-check`・Laravel Pint・PHPStan(Larastan)・PHPUnitまで自動的に実行される。
-  - 詳細・検証結果はIssue #215のPull Requestを参照。
+- 手順は`make check`と同一（PHPイメージだけが異なる）で、`composer install`から`composer check`（`composer:validate`/`composer:audit`/`composer:prod-check`/Laravel Pint/PHPStan(Larastan)/PHPUnit）まですべて実行し、成功・失敗がそのまま`make check-php85`の結果になる。Issue #215時点ではLaravel 8・依存関係（`nette/schema`・`nette/utils`のPHP上限8.4）がPHP 8.5を正式サポートしておらず、既知の非互換を検出した場合だけ後続を未実施のまま成功扱いにする一時的な判定処理を経由していたが、Issue #216のLaravel 9更新でこれらの間接依存がPHP 8.5対応版へ更新されたため撤去した。
 - 異常終了などでcleanupが行われなかった場合は `make check-php85-clean` で検証専用projectだけを片付けられる。
 
 ### テスト
@@ -167,7 +161,7 @@ composer analyse             # PHPStan/Larastanを実行する
 
 これにより、「監査に成功しbaseline外の脆弱性がなかった」場合と「アドバイザリ取得先に到達できず結果を取得できなかった」場合を区別し、後者を「脆弱性なし」として誤成功させない。
 
-`composer:audit`（ラッパー）は、Issue #214時点で既知だった脆弱性アドバイザリ（直接依存の`guzzlehttp/guzzle`・`laravel/framework`・`phpunit/phpunit`と、いくつかの間接依存）を`composer.json`の`config.audit.ignore`へ理由付きで記録し、新規のアドバイザリが増えた場合だけ失敗する構成にしている。abandoned package（`fruitcake/laravel-cors`、`swiftmailer/swiftmailer`）は結果に表示されるが、依存関係の置き換えを伴うためCIは失敗させない（`config.audit.abandoned=report`）。既知の脆弱性の詳細と対応方針、および44件のbaseline解消を追跡するフォローアップIssueはIssue #214のPull Request（#235）を参照。
+`composer:audit`（ラッパー）は、既知の脆弱性アドバイザリを`composer.json`の`config.audit.ignore`へ理由付きで記録し、新規のアドバイザリが増えた場合だけ失敗する構成にしている。Issue #214時点では44件だったbaselineは、Issue #216のLaravel 9更新で33件が解消し、現在は`laravel/framework`関連の4件（Laravel 9.x系に修正版が存在せずLaravel 10以降でのみ修正されるもの。本アプリケーションが該当機能(メール送信・署名付きURL・ファイルアップロード)を使用していないことを個別に確認済み）のみ残っている。abandoned package（`fruitcake/laravel-cors`）は結果に表示されるが、依存関係の置き換えを伴うためCIは失敗させない（`config.audit.abandoned=report`）。baseline解消の追跡はIssue #236、詳細はIssue #216のPull Request（#238）を参照。
 
 ### ローカルで Google 認証
 
@@ -193,4 +187,4 @@ composer analyse             # PHPStan/Larastanを実行する
 
 Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull Requestでは、GitHub Actionsがローカルと同じ固定PHP 8.2.30・Composer 2.8.12・MySQL 5.7.35で `make check` を実行する。`make check` はLaravel Pintによるフォーマット確認、PHPStan/Larastanによる静的解析、既存テストを実行するため、フォーマット違反または新規の静的解析違反があるとCIは失敗する。mainにプッシュした場合だけ、テスト結果を[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)へアップし、Slackへ通知する。
 
-同じワークフロー内で `php85-compat` ジョブが `make check-php85`（PHP 8.5系での互換確認、前述）を実行する（Issue #215）。このジョブは `test`・`publish-test-report`・`notify`（Slack通知）のいずれの`needs`にも含まれていないが、それ自体はnon-blockingの理由ではない（GitHub Actionsは失敗したジョブが1つでもあればワークフロー全体を失敗として扱うため）。実際には、`src/scripts/php85-compat-check.php`が「Issue #216で追跡中の既知の非互換（`nette/schema v1.3.2`・`nette/utils v4.0.5`のPHP上限8.4）だけ」であることをパッケージ名・バージョン・PHP制約の完全一致で機械的に確認できた場合に限り、`make check-php85`自体を成功（exit 0）で終える構成にしているため、`php85-compat` ジョブおよびワークフロー全体が成功する。想定外の非互換・ネットワーク障害・Composer設定不整合など、既知の状態と一致しない失敗は`continue-on-error`等で隠さず、`make check-php85`・ジョブ・ワークフロー全体を通常どおり失敗させる。ジョブの実行結果とGitHub Step Summary（環境構築結果・検出した既知の阻害パッケージ・未実施項目等）は、CIの実行結果画面から確認できる。依存関係がPHP 8.5対応版へ更新されれば、bootstrap以降の検証まで自動的に実行されるようになる。
+同じワークフロー内で `php85-compat` ジョブが `make check-php85`（PHP 8.5系での互換確認、前述）を実行する（Issue #215）。`test`・`publish-test-report`・`notify`（Slack通知）のいずれの`needs`にも含まれておらず、PHP 8.2.30側の検証結果とは独立に結果を確認できる。Issue #216のLaravel 9更新以降は`make check`と同じ通常のフロー（成功・失敗がそのままジョブの結果になる）で実行しており、一時的な既知非互換判定処理は使用していない。
