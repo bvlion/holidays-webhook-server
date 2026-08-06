@@ -69,7 +69,7 @@
 | GET | `/doc` | ReDocのHTMLを返す |
 | GET | `/openapi.yml` | ReDocが参照するOpenAPI定義を返す |
 
-Laravel Sanctumが登録する `/sanctum/csrf-cookie` もルート一覧に存在するが、現在のAPI認証には使用されていない。
+Issue #217（Laravel 10更新）で、未使用だった`laravel/sanctum`パッケージ自体を削除したため、`/sanctum/csrf-cookie`ルートは存在しない。
 
 ### 5.2 認証が必要なAPIルート
 
@@ -271,7 +271,6 @@ Google Calendarの休日結果より、ユーザーまたはグループの `cal
 
 | 候補 | 根拠 | 確認が必要な点 |
 | --- | --- | --- |
-| Laravel Sanctum | APIガードはLaravelのトークンガードで、Sanctumミドルウェアは無効 | 外部クライアントが `/sanctum/csrf-cookie` を利用していないか |
 | Laravel Sail | 独自のDocker Composeを使用し、Sailの実行記述がない | 開発者がリポジトリ外の手順で利用していないか |
 | メール設定 | アプリケーションからメール送信するコードがない | 本番固有コードや運用スクリプトがないか |
 | キュー設定 | ジョブ実装がなく既定接続は同期 | 本番環境だけのワーカーがないか |
