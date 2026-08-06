@@ -127,7 +127,13 @@ make check-php85
 
 - `docker/web/Dockerfile` は変更せず、ビルド引数 `PHP_IMAGE` の上書き（`docker-compose.check-php85.yml`、`docker-compose.check.yml` と組み合わせて使う）だけでPHP 8.5イメージを再利用する。`db`・`db-check`（MySQL 5.7.35）は`make check`と共通のまま。
 - 専用のCompose project（`holidays-webhook-server-check-php85`）を使い、開発用・`make check`用のどちらのcontainer・network・volume・host portにも一切触れない。
-- 現在のLaravel 8・依存関係（`nette/schema`・`nette/utils`など）はPHP 8.5を正式サポートしていないため、`make check-php85` は途中の処理（`composer install`）で失敗する状態が既知である。この状態を隠さず、失敗した場合もcleanupだけは行う。詳細・原因の切り分けはIssue #215のPull Requestを参照。
+- 現在のLaravel 8・依存関係（`nette/schema v1.3.2`・`nette/utils v4.0.5`。いずれもPHP上限が8.4）はPHP 8.5を正式サポートしていない。`src/scripts/php85-compat-check.php`が、次をすべて満たす場合に限り「Issue #216で追跡中の既知の非互換」と機械的に判定し、`make check-php85`はこの場合**成功（exit 0）** で終える。
+  - `composer validate --strict` が成功している（Composer設定・composer.lockの不整合ではない）
+  - `composer install` が失敗している
+  - `composer why-not php <実行中のPHPバージョン> --locked` が終了コード1・想定どおりの標準エラーで終了し、その標準出力から抽出した「パッケージ名・ロック済みバージョン・PHP制約」の組が、上記2パッケージと**完全一致**する
+  - 上記のいずれか1つでも一致しない場合（新規の非互換、PHP制約の変化、ネットワーク障害、Composer設定不整合等）は、既知の状態ではない**未知の失敗**として `make check-php85` を失敗させる。
+  - 既知の非互換が解消され `composer install` が成功すれば、bootstrap・DB seed・`composer:validate`/`composer:audit`/`composer:prod-check`・Laravel Pint・PHPStan(Larastan)・PHPUnitまで自動的に実行される。
+  - 詳細・検証結果はIssue #215のPull Requestを参照。
 - 異常終了などでcleanupが行われなかった場合は `make check-php85-clean` で検証専用projectだけを片付けられる。
 
 ### テスト
@@ -187,4 +193,4 @@ composer analyse             # PHPStan/Larastanを実行する
 
 Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull Requestでは、GitHub Actionsがローカルと同じ固定PHP 8.2.30・Composer 2.8.12・MySQL 5.7.35で `make check` を実行する。`make check` はLaravel Pintによるフォーマット確認、PHPStan/Larastanによる静的解析、既存テストを実行するため、フォーマット違反または新規の静的解析違反があるとCIは失敗する。mainにプッシュした場合だけ、テスト結果を[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)へアップし、Slackへ通知する。
 
-同じワークフロー内で `php85-compat` ジョブが `make check-php85`（PHP 8.5系での互換確認、前述）を実行する（Issue #215）。このジョブは `test`・`publish-test-report`・`notify`（Slack通知）のいずれの`needs`にも含まれておらず、現時点で失敗しても他のジョブやSlack通知の成否には影響しない（non-blocking）。現行のLaravel 8・依存関係がPHP 8.5を正式サポートしていないための既知の失敗であり、結果はCIの実行結果画面から個別に確認できる。
+同じワークフロー内で `php85-compat` ジョブが `make check-php85`（PHP 8.5系での互換確認、前述）を実行する（Issue #215）。このジョブは `test`・`publish-test-report`・`notify`（Slack通知）のいずれの`needs`にも含まれていないが、それ自体はnon-blockingの理由ではない（GitHub Actionsは失敗したジョブが1つでもあればワークフロー全体を失敗として扱うため）。実際には、`src/scripts/php85-compat-check.php`が「Issue #216で追跡中の既知の非互換（`nette/schema v1.3.2`・`nette/utils v4.0.5`のPHP上限8.4）だけ」であることをパッケージ名・バージョン・PHP制約の完全一致で機械的に確認できた場合に限り、`make check-php85`自体を成功（exit 0）で終える構成にしているため、`php85-compat` ジョブおよびワークフロー全体が成功する。想定外の非互換・ネットワーク障害・Composer設定不整合など、既知の状態と一致しない失敗は`continue-on-error`等で隠さず、`make check-php85`・ジョブ・ワークフロー全体を通常どおり失敗させる。ジョブの実行結果とGitHub Step Summary（環境構築結果・検出した既知の阻害パッケージ・未実施項目等）は、CIの実行結果画面から確認できる。依存関係がPHP 8.5対応版へ更新されれば、bootstrap以降の検証まで自動的に実行されるようになる。
