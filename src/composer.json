@@ -15,7 +15,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
-        "larastan/larastan": "^1.0",
+        "larastan/larastan": "^2.0",
         "laravel/pint": "^1.30",
         "laravel/sail": "^1.0.1",
         "mockery/mockery": "^1.4.2",
@@ -76,16 +76,9 @@
         "audit": {
             "abandoned": "report",
             "ignore": {
-                "PKSA-1gck-s111-yq7g": "composer/composer(larastan/larastanの間接依存)のANSIシーケンス注入脆弱性(CVE-2025-67746)。larastan経由でのみ同梱される開発時ライブラリで、CLIとして実行することはない(実際のComposerバイナリは2.8.12をDocker側で別途固定)。larastanが新しいcomposer/composerを取り込むまでIssue #236で継続追跡する。",
-                "PKSA-4pm6-g63v-5rkr": "composer/composer(larastan/larastanの間接依存)のURL埋め込みHTTP-Basicユーザー名がverboseログへ漏えいする脆弱性(CVE-2026-59947)。上記PKSA-1gck-s111-yq7gと同じ理由でIssue #236にて継続追跡する。",
-                "PKSA-6bp1-9hfj-2cgv": "composer/composer(larastan/larastanの間接依存)のPerforceリポジトリ定義経由のコマンドインジェクション(CVE-2026-40176)。同上の理由でIssue #236にて継続追跡する。",
                 "PKSA-3r5d-mb8f-1qw9": "laravel/frameworkのデフォルトemailバリデーションルールにおけるCRLFインジェクション(GHSA-5vg9-5847-vvmq)。Laravel 9.x系には修正版が存在しない(12.60.0/13.10.0以降でのみ修正)。本アプリケーションはメール送信機能を持たないため該当する攻撃経路は無いことを確認済み。Laravel 10以降への更新(Issue #236)まで許容する。",
                 "PKSA-8qx3-n5y5-vvnd": "laravel/frameworkのファイルバリデーション不備(CVE-2025-27515)。Laravel 9.x系には修正版が存在しない(10.48.29/11.44.1/12.1.1以降でのみ修正)。本アプリケーションはファイルアップロード機能を持たないため該当する攻撃経路は無いことを確認済み。Laravel 10以降への更新(Issue #236)まで許容する。",
                 "PKSA-m5cs-t1y6-qpcs": "laravel/frameworkの一時署名付きURLのパス混同(GHSA-crmm-hgp2-wgrp)。Laravel 9.x系には修正版が存在しない(12.61.1/13.12.0以降でのみ修正)。本アプリケーションは署名付きURLを使用していないため該当する攻撃経路は無いことを確認済み。Laravel 10以降への更新(Issue #236)まで許容する。",
-                "PKSA-pwvr-3754-v57r": "composer/composer(larastan/larastanの間接依存)のGitHub ActionsログへのGITHUB_TOKEN漏えい(CVE-2026-45793)。PKSA-1gck-s111-yq7gと同じ理由でIssue #236にて継続追跡する。",
-                "PKSA-q3ht-3g42-rg8f": "composer/composer(larastan/larastanの間接依存)のbinフィールド経由のパストラバーサル(CVE-2026-59946)。同上の理由でIssue #236にて継続追跡する。",
-                "PKSA-t5r2-p5q9-mtpn": "composer/composer(larastan/larastanの間接依存)のPerforceソース参照経由のコマンドインジェクション(CVE-2026-40261)。同上の理由でIssue #236にて継続追跡する。",
-                "PKSA-zcdk-qnhk-hq2g": "composer/composer(larastan/larastanの間接依存)の悪意ある推移的パッケージ名によるvendor外への任意ファイル書き込み(CVE-2026-59948)。同上の理由でIssue #236にて継続追跡する。",
                 "PKSA-mdq4-51ck-6kdq": "laravel/frameworkのデフォルトemailバリデーションルールにおけるCRLFインジェクション(CVE-2026-48019、PKSA-3r5d-mb8f-1qw9と同一の脆弱性に対する別アドバイザリ)。Laravel 9.x系には修正版が存在しない。理由はPKSA-3r5d-mb8f-1qw9と同じ。Laravel 10以降への更新(Issue #236)まで許容する。"
             }
         }
