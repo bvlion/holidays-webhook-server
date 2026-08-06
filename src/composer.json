@@ -6,7 +6,6 @@
     "license": "MIT",
     "require": {
         "php": "^8.0.2",
-        "fruitcake/laravel-cors": "^3.0",
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^9.0",
         "laravel/sanctum": "^2.11",
@@ -76,10 +75,10 @@
         "audit": {
             "abandoned": "report",
             "ignore": {
-                "PKSA-3r5d-mb8f-1qw9": "laravel/frameworkのデフォルトemailバリデーションルールにおけるCRLFインジェクション(GHSA-5vg9-5847-vvmq)。Laravel 9.x系には修正版が存在しない(12.60.0/13.10.0以降でのみ修正)。本アプリケーションはメール送信機能を持たないため該当する攻撃経路は無いことを確認済み。Laravel 10以降への更新(Issue #236)まで許容する。",
-                "PKSA-8qx3-n5y5-vvnd": "laravel/frameworkのファイルバリデーション不備(CVE-2025-27515)。Laravel 9.x系には修正版が存在しない(10.48.29/11.44.1/12.1.1以降でのみ修正)。本アプリケーションはファイルアップロード機能を持たないため該当する攻撃経路は無いことを確認済み。Laravel 10以降への更新(Issue #236)まで許容する。",
-                "PKSA-m5cs-t1y6-qpcs": "laravel/frameworkの一時署名付きURLのパス混同(GHSA-crmm-hgp2-wgrp)。Laravel 9.x系には修正版が存在しない(12.61.1/13.12.0以降でのみ修正)。本アプリケーションは署名付きURLを使用していないため該当する攻撃経路は無いことを確認済み。Laravel 10以降への更新(Issue #236)まで許容する。",
-                "PKSA-mdq4-51ck-6kdq": "laravel/frameworkのデフォルトemailバリデーションルールにおけるCRLFインジェクション(CVE-2026-48019、PKSA-3r5d-mb8f-1qw9と同一の脆弱性に対する別アドバイザリ)。Laravel 9.x系には修正版が存在しない。理由はPKSA-3r5d-mb8f-1qw9と同じ。Laravel 10以降への更新(Issue #236)まで許容する。"
+                "PKSA-3r5d-mb8f-1qw9": "laravel/frameworkのデフォルトemailバリデーションルールにおけるCRLFインジェクション(GHSA-5vg9-5847-vvmq)。Laravel 9.x系には修正版が存在せず、Laravel 12.60.0以降で修正される。本アプリケーションはメール送信機能を持たないため該当する攻撃経路は無いことを確認済み。解消確認先: Issue #219（Laravel 12更新時）。baseline追跡: Issue #236。",
+                "PKSA-8qx3-n5y5-vvnd": "laravel/frameworkのファイルバリデーション不備(CVE-2025-27515)。Laravel 9.x系には修正版が存在せず、Laravel 10.48.29以降で修正される。本アプリケーションはファイルアップロード機能を持たないため該当する攻撃経路は無いことを確認済み。解消確認先: Issue #217（Laravel 10更新時）。baseline追跡: Issue #236。",
+                "PKSA-m5cs-t1y6-qpcs": "laravel/frameworkの一時署名付きURLのパス混同(GHSA-crmm-hgp2-wgrp)。Laravel 9.x系には修正版が存在せず、Laravel 12.61.1以降で修正される。本アプリケーションは署名付きURLを使用していないため該当する攻撃経路は無いことを確認済み。解消確認先: Issue #219（Laravel 12更新時）。baseline追跡: Issue #236。",
+                "PKSA-mdq4-51ck-6kdq": "laravel/frameworkのデフォルトemailバリデーションルールにおけるCRLFインジェクション(CVE-2026-48019、PKSA-3r5d-mb8f-1qw9と同一の脆弱性に対する別アドバイザリ)。Laravel 9.x系には修正版が存在せず、Laravel 12.60.0以降で修正される。理由はPKSA-3r5d-mb8f-1qw9と同じ。解消確認先: Issue #219（Laravel 12更新時）。baseline追跡: Issue #236。"
             }
         }
     }

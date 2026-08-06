@@ -121,25 +121,31 @@ check-clean:
 
 # PHP 8.5系の互換確認。開発用・通常の検証用（$(CHECK_PROJECT)）のどちらにも
 # 一切触れず、専用のCompose project（$(CHECK_PHP85_PROJECT)）だけを使う。
-# 手順は`check`と同一で、PHPイメージだけが異なる。
+# 手順は`check`とほぼ同一（PHPイメージだけが異なる）だが、`composer install`
+# を試みる前に、PHP 8.5用イメージが実際にビルドしたとおりの環境
+# （PHPバージョン・Composerの実行可否・必要拡張）になっているかを
+# `run --rm --no-deps`（コンテナ起動前）で確認する点が異なる。
+# PHPバージョンは表示するだけでなく、`PHP_VERSION === '8.5.9'`を
+# 機械的に判定し、不一致なら（ビルド引数の設定誤り等）ここで失敗させる。
 #
 # Issue #215時点ではnette/schema・nette/utilsのPHP上限(8.4)により
 # `composer install`が失敗する既知の状態があり、一時的な判定ロジック
 # （`scripts/php85-compat-check.php`）を経由していたが、Issue #216の
 # Laravel 9更新でこれらの間接依存がPHP 8.5対応版へ更新され、
 # `composer install`がPHP 8.5.9でも成功することを確認できたため、
-# 一時的な処理を撤去し`check`と同じ通常のフローに戻した。
+# 一時的な処理は撤去済み。通常の`composer install`失敗はそのまま失敗させる。
 check-php85: local-environment-guard
 	trap '$(CHECK_PHP85_COMPOSE) down --volumes --remove-orphans' EXIT; \
 	$(CHECK_PHP85_COMPOSE) build web db db-check && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web php --version && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web php -r 'exit(PHP_VERSION === "8.5.9" ? 0 : 1);' && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web composer --version && \
+	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web php -r 'exit(array_diff(["pdo_mysql", "intl", "gd", "zip"], get_loaded_extensions()) === [] ? 0 : 1);' && \
 	$(CHECK_PHP85_COMPOSE) run --rm --no-deps --user "$$(id -u):$$(id -g)" --env COMPOSER_HOME=/tmp/composer --env XDEBUG_MODE=off web composer install --no-interaction --prefer-dist && \
 	$(CHECK_PHP85_COMPOSE) up --detach web db && \
 	$(CHECK_PHP85_COMPOSE) run --rm --no-deps db-check && \
 	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php artisan db:seed --force && \
 	$(CHECK_PHP85_COMPOSE) config --quiet && \
-	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php --version && \
-	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer --version && \
-	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web php -r 'exit(array_diff(["pdo_mysql", "intl", "gd", "zip"], get_loaded_extensions()) === [] ? 0 : 1);' && \
 	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check-platform-reqs --no-dev && \
 	$(CHECK_PHP85_COMPOSE) exec -T --env XDEBUG_MODE=off web composer check
 
