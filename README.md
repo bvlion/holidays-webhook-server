@@ -161,7 +161,7 @@ composer analyse             # PHPStan/Larastanを実行する
 
 これにより、「監査に成功しbaseline外の脆弱性がなかった」場合と「アドバイザリ取得先に到達できず結果を取得できなかった」場合を区別し、後者を「脆弱性なし」として誤成功させない。
 
-`composer:audit`（ラッパー）は、既知の脆弱性アドバイザリを`composer.json`の`config.audit.ignore`へ理由付きで記録し、新規のアドバイザリが増えた場合だけ失敗する構成にしている。Issue #214時点では44件だったbaselineは、Issue #216のLaravel 9更新で33件（依存更新）＋7件（`larastan/larastan`更新に伴う`composer/composer`の除去）が解消し、現在は`laravel/framework`関連の4件のみ残っている。いずれもLaravel 9.x系には修正版が存在しないが、本アプリケーションが該当機能（メール送信・署名付きURL・ファイルアップロード）を使用していないことを個別に確認済み。1件はLaravel 10（Issue #217）、3件はLaravel 12（Issue #219）で修正版が提供され次第、解消を確認する。abandoned packageは現在0件（Issue #216で`fruitcake/laravel-cors`をLaravel 9内蔵の`Illuminate\Http\Middleware\HandleCors`へ置き換えたため）。baseline解消の追跡はIssue #236、詳細はIssue #216のPull Request（#238）を参照。
+`composer:audit`（ラッパー）は、既知の脆弱性アドバイザリを`composer.json`の`config.audit.ignore`へ理由付きで記録し、新規のアドバイザリが増えた場合だけ失敗する構成にしている。Issue #214時点では44件だったbaselineは、Issue #216のLaravel 9更新で33件（依存更新）＋7件（`larastan/larastan`更新に伴う`composer/composer`の除去）が解消し、Issue #217のLaravel 10更新（`laravel/framework` 10.50.2）でファイルバリデーション不備（CVE-2025-27515）の1件がさらに解消したため、現在は`laravel/framework`関連の3件のみ残っている。いずれもLaravel 10.x系には修正版が存在しないが、本アプリケーションが該当機能（メール送信・署名付きURL）を使用していないことを個別に確認済み。Laravel 12（Issue #219）で修正版が提供され次第、解消を確認する。abandoned packageは引き続き0件。0件になったのはIssue #216で`fruitcake/laravel-cors`をLaravel 9内蔵の`Illuminate\Http\Middleware\HandleCors`へ置き換えたためであり、Issue #217では未使用の`laravel/sanctum`も削除したが、`laravel/sanctum`はabandoned packageではないため件数には影響していない。baseline解消の追跡はIssue #236、詳細はIssue #216のPull Request（#238）・Issue #217のPull Request（#239）を参照。
 
 ### ローカルで Google 認証
 

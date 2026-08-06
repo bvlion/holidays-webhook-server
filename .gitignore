@@ -3,6 +3,7 @@
 /src/storage/*.key
 /src/vendor
 /src/.phpunit.result.cache
+/src/.phpunit.cache
 docker-compose.override.yml
 /src/logs/*
 !/src/logs/.gitkeep
