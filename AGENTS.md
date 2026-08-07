@@ -53,7 +53,7 @@ Codex等のAIエージェントがこのリポジトリで作業する際に守�
 
 ## 依存関係追加・更新時の方針
 
-- 新しい依存関係の追加はこのIssueの範囲外。既存依存の更新やDependabot運用は [`docs/dependency-updates.md`](docs/dependency-updates.md) を参照する。
+- 新しい依存関係は、対象Issueで必要性がある場合のみ追加する。対象Issueに不要な依存追加を先回りして行わない。既存依存の更新やDependabot運用は [`docs/dependency-updates.md`](docs/dependency-updates.md) を参照する。
 - 依存を変更した場合は `composer:validate`・`composer:audit`・`composer:prod-check` を含む `make check` を通すこと。
 - `composer:audit` は `scripts/audit-guard.php` 経由の監査ラッパーを使う。素の `composer audit` を直接呼ばない。
 
@@ -61,12 +61,13 @@ Codex等のAIエージェントがこのリポジトリで作業する際に守�
 
 - Laravelマイグレーションは存在しない。テーブル定義は `docker/db/sql/*.sql` がローカルMySQLコンテナの初回起動時にのみ適用する。
 - 本番スキーマへの適用手順・実スキーマとの差分はリポジトリから確認できない（[`docs/current-operations.md`](docs/current-operations.md) 参照）。
-- このIssueの範囲、および特別な指示がない限り、DBスキーマ変更・migration機構の導入は行わない。テーブル定義を変更する場合は、ローカルSQLと本番適用手順の両方に影響することを踏まえ、事前に方針を確認する。
+- DB schema / migrationの変更も、対象Issueで明示的に必要な場合のみ行う。対象Issueに不要なschema変更を先回りして行わない。テーブル定義を変更する場合は、ローカルSQLと本番適用手順の両方に影響することを踏まえ、事前に方針を確認する。
 
 ## 外部HTTP通信を伴う実装・テストの方針
 
-- アプリケーションはGoogle認証（Socialite）、Google Calendar API、ユーザー登録の外部HTTPエンドポイントへ実際にリクエストする。
-- テスト・CIではこれらの外部通信をモック・スタブし、実際の外部サービスへ到達させない。CI（`.github/workflows/test.yaml`）が唯一許容している外部通信は、mainへのpush時にテストレポート変換用XSLTを取得する処理だけである。
+- アプリケーションはGoogle認証（Socialite）、Google Calendar API、コマンドに登録された任意の外部HTTPエンドポイントへ実際にリクエストする。
+- テストでは、これらアプリケーションが依存する外部サービス（Google認証・Google Calendar・コマンドの実行先等）への実通信を行わない。mock / stub等で置き換えること。
+- これは開発・CI基盤自身が必要とする通信（`composer install`によるパッケージ取得、`composer audit`によるアドバイザリ取得、Dockerイメージのpull等）まで禁止するものではない。`make check`はこれらの通信を前提に動作する。
 - 新しい外部HTTP呼び出しを追加する場合は、失敗時（接続エラー・非2xx応答）の挙動を明示し、秘密情報をログ・保存データに残さない（[`docs/secrets-management.md`](docs/secrets-management.md) 参照）。
 
 ## 作業後の検証
