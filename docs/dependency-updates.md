@@ -44,7 +44,11 @@ patchグループとminorグループを分離し、majorをどちらとも混�
 
 minor・major、および人間が作成した通常のPRはこの条件に一致しないため自動マージされない。専用のPersonal Access Tokenは追加せず、標準の `GITHUB_TOKEN` のみを使用する。
 
-`gh pr merge --auto` はGitHubの auto-merge 機能を有効化するだけであり、実際のマージは、mainブランチで必須化した `test` ステータスチェックが成功するまで行われない。CIが失敗した場合、auto-mergeは解除され、そのPRは手動確認が必要な状態のまま残る。
+`gh pr merge --auto` はGitHubの auto-merge 機能を有効化するだけであり、実際のマージ可否は、mainブランチで必須化した `test` ステータスチェックの結果に従う。
+
+- `test` が成功するまで、実際のマージは行われない。
+- `test` が失敗している状態ではマージされない。
+- その後 `test` を再実行するなどして成功すれば、他の条件（PR作成者、base branch、`update-type` 等）を満たしている限り、有効化されたauto-mergeによって自動的にマージされ得る。auto-merge自体はCI失敗によって解除されるわけではない。
 
 ## 6. mainブランチの保護（ruleset）
 
