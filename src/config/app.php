@@ -1,7 +1,6 @@
 <?php
 
 use App\Providers\AppServiceProvider;
-use App\Providers\EventServiceProvider;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\AuthServiceProvider;
 use Illuminate\Auth\Passwords\PasswordResetServiceProvider;
@@ -24,6 +23,7 @@ use Illuminate\Queue\QueueServiceProvider;
 use Illuminate\Redis\RedisServiceProvider;
 use Illuminate\Session\SessionServiceProvider;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
@@ -232,8 +232,6 @@ return [
          * Application Service Providers...
          */
         AppServiceProvider::class,
-        App\Providers\AuthServiceProvider::class,
-        EventServiceProvider::class,
         RouteServiceProvider::class,
 
     ],
@@ -251,7 +249,7 @@ return [
 
     'aliases' => [
 
-        'App' => Illuminate\Support\Facades\App::class,
+        'App' => App::class,
         'Arr' => Arr::class,
         'Artisan' => Artisan::class,
         'Auth' => Auth::class,
