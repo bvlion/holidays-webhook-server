@@ -51,6 +51,7 @@ jobs:
             . ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
 
       - name: Slack Notification
+        if: always()
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
