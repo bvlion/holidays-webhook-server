@@ -1,8 +1,44 @@
 version: 2
 updates:
+  # Composer (src/composer.json)
   - package-ecosystem: "composer"
     directory: "/src"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
       time: "08:00"
       timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 10
+    groups:
+      # patchのみをまとめる。auto-mergeワークフローはこのグループのPRを
+      # dependabot/fetch-metadataのupdate-typeで判定するため、
+      # patch以外のupdate-typeを混在させないこと。
+      composer-patch:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+      composer-minor:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+      # majorはグルーピングしない（個別PRのまま、手動確認）。
+
+  # GitHub Actions (.github/workflows/*.yaml)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:30"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 10
+    groups:
+      actions-patch:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+      actions-minor:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+      # majorはグルーピングしない（個別PRのまま、手動確認）。
