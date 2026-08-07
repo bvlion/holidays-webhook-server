@@ -8,14 +8,12 @@
         "php": "^8.3",
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^13.0",
-        "laravel/socialite": "^5.2",
-        "laravel/tinker": "^3.0"
+        "laravel/socialite": "^5.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.30",
-        "laravel/sail": "^1.0.1",
         "mockery/mockery": "^1.4.2",
         "nunomaduro/collision": "^8.1",
         "phpunit/phpunit": "^12.0",
