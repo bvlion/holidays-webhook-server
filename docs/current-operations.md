@@ -101,6 +101,8 @@ Issue #213の作業中、一時的な `docker-compose.override.yml` を使って
 
 PHP 8.5系での互換確認環境（`docker-compose.check-php85.yml`、`make check-php85`、GitHub Actionsの`php85-compat`ジョブ）はIssue #215で、本番・開発用の標準PHPが8.2.30のままだった移行期間中に追加したものである。Issue #220でローカル・CIの標準PHPそのものをPHP 8.5.9へ昇格し、`docker/web/Dockerfile`の既定`PHP_IMAGE`を`php:8.5.9-apache`にしたことで、`make check`が常にPHP 8.5.9で実行されるようになり、この互換確認環境とは完全に重複した。リポジトリにbranch protectionは設定されておらず（Issue #220着手時に`gh api repos/.../branches/main/protection`で404「Branch not protected」を確認）、`php85-compat`はrequired checkではないため、Issue #220でこれらを削除し`make check`へ統合した。
 
+**この「branch protectionは設定されていない」という記述はIssue #220着手時点の状態である。** その後Issue #222でリポジトリruleset「main protection」（`test`チェックを必須化、直接pushを禁止）を導入しており、現在のmainブランチには保護設定がある。詳細は [`dependency-updates.md`](dependency-updates.md) の「6. mainブランチの保護（ruleset）」を参照する。
+
 ## 3. 継続的インテグレーション
 
 `.github/workflows/test.yaml` は次のイベントを対象とする。

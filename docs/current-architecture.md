@@ -267,14 +267,16 @@ Google Calendarの休日結果より、ユーザーまたはグループの `cal
 
 ## 11. 現在使用されていない機能・依存関係の候補
 
-次はコード検索とルート確認に基づく候補であり、削除可否は本番利用状況を確認してから判断する必要がある。
+次は2026-08-03時点のコード検索とルート確認に基づく候補であり、削除可否は本番利用状況を確認してから判断する必要がある。
+
+**このうちLaravel Sail・`laravel/tinker`・未使用のApp\Providers\EventServiceProvider/AuthServiceProvider/BroadcastServiceProviderは、Issue #221（PR #245）で削除済みである。** 該当行は削除当時の判断根拠として残す。
 
 | 候補 | 根拠 | 確認が必要な点 |
 | --- | --- | --- |
-| Laravel Sail | 独自のDocker Composeを使用し、Sailの実行記述がない | 開発者がリポジトリ外の手順で利用していないか |
+| ~~Laravel Sail~~（Issue #221で`composer.json`の`laravel/sail`を削除済み） | 独自のDocker Composeを使用し、Sailの実行記述がない | 対応済み |
 | メール設定 | アプリケーションからメール送信するコードがない | 本番固有コードや運用スクリプトがないか |
 | キュー設定 | ジョブ実装がなく既定接続は同期 | 本番環境だけのワーカーがないか |
-| ブロードキャスト関連 | サービスプロバイダーが無効で、チャンネル利用コードがない | 将来利用予定か |
+| ~~ブロードキャスト関連~~（Issue #221で`App\Providers\BroadcastServiceProvider`と`routes/channels.php`を削除済み。フレームワーク本体の`Illuminate\...\BroadcastServiceProvider`は引き続き読み込まれる） | サービスプロバイダーが無効で、チャンネル利用コードがない | 対応済み |
 | `GoogleLoginController::apiLogin()` | 対応ルートがない | 廃止されたクライアントフローか |
 | SSID関連テーブルとモデル | 完結したAPI・実行経路がない | 外部プロセスが直接データベースを更新していないか |
 | `SummarizeCommand`、`TimeTrigger` の管理経路 | 実行処理はあるが登録・更新APIがない | 別クライアントや直接SQLで管理しているか |
