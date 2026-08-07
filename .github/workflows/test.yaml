@@ -31,7 +31,9 @@ jobs:
       # composer:latest は使用しない。`make check` は検証専用のCompose project
       # （docker-compose.check.yml、Issue #233）だけを使い、成功・失敗に
       # かかわらず自分自身でそのprojectをcleanupするため、このworkflowから
-      # 追加でcompose downを呼ぶ必要はない。
+      # 追加でcompose downを呼ぶ必要はない。webサービスのPHPはIssue #220で
+      # PHP 8.5.9が標準になっており、`make check`自身がPHP_VERSIONを
+      # 機械的に検証する。
       - name: make check
         run: make check
 
@@ -51,34 +53,6 @@ jobs:
         with:
           name: test-report
           path: report
-
-  # PHP 8.5系の互換確認。本番・開発用は引き続きPHP 8.2.30のまま。
-  # Issue #215時点ではnette/schema・nette/utilsのPHP上限(8.4)により
-  # `composer install`が失敗する既知の状態があり、一時的な判定ロジックで
-  # bootstrap以降を未実施のまま成功扱いにしていたが、Issue #216のLaravel 9
-  # 更新でこれらの間接依存がPHP 8.5対応版へ更新され、`composer install`が
-  # PHP 8.5.9でも成功するようになったため、一時的な処理を撤去し`test`
-  # ジョブと同じ通常のフロー（`make check-php85`が成功すればジョブも成功、
-  # 失敗すればジョブも失敗）に戻した。
-  php85-compat:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
-
-      - name: cache composer vendor (php8.5)
-        uses: actions/cache@v4
-        with:
-          path: ./src/vendor
-          key: ${{ runner.os }}-composer-php85-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-php85-
-
-      # PHP 8.2.30向けの`make check`と同じ手順を、`docker-compose.check.yml`に
-      # `docker-compose.check-php85.yml`を重ねた専用のCompose project
-      # （holidays-webhook-server-check-php85）でだけ実行する。
-      - name: make check-php85
-        run: make check-php85
 
   publish-test-report:
     if: ${{ github.event_name == 'push' }}

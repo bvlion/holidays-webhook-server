@@ -19,7 +19,7 @@
 
 | 項目 | 現在の設定 | 根拠 |
 | --- | --- | --- |
-| PHP | 8.2 | `docker/web/Dockerfile` の `php:8.2-apache` |
+| PHP | 8.5.9 | `docker/web/Dockerfile` の `php:8.5.9-apache`（Issue #220でPHP 8.2.30から昇格） |
 | Webサーバー | Apache | PHPのApacheイメージと `docker/web/httpd-base.conf` |
 | ドキュメントルート | `/var/www/html/public` | Apache VirtualHost設定 |
 | データベース | MySQL Server 5.7.35 | `docker/db/Dockerfile` |
@@ -47,7 +47,7 @@ READMEに記載された初回構築は `make setup` の1コマンドで、処�
 1. `src/.env` が存在しない場合だけ、ルートの `.env.example` から作成する。
 2. ローカル固定値だけを許可する接続先ガードを実行し、通過後にLaravelの設定キャッシュを削除する。
 3. Docker Composeでローカル用イメージをビルドする。
-4. Webイメージ内のPHP 8.2.30とComposer 2.8.12で `composer install` を実行する。
+4. Webイメージ内のPHP 8.5.9とComposer 2.8.12で `composer install` を実行する。
 5. `web` と `db` を起動し、`db-check` でMySQLの応答を待つ。
 6. 初回のMySQLコンテナ作成時にSQLを適用し、空のDatabaseSeederを実行する。
 
@@ -97,13 +97,9 @@ Issue #213の作業中、一時的な `docker-compose.override.yml` を使って
 
 `web`・`db`・`db-check` のbuild対象・環境変数・`src`／`docker/db/sql`等のマウント内容は開発用と同じにしてあり、検証結果が開発環境と乖離しないようにしている。
 
-### 2.8 PHP 8.5互換確認環境（`make check-php85`）
+### 2.8 PHP 8.5互換確認環境の廃止（旧`make check-php85`）
 
-本番・開発用のPHPは引き続き8.2.30のままだが、将来のPHP 8.5移行に向けた互換確認環境を追加した（Issue #215）。`docker/web/Dockerfile` はビルド引数 `PHP_IMAGE`（既定値 `php:8.2.30-apache`、ファイル自体は変更しない）で切り替え可能にし、`docker-compose.check.yml` に `docker-compose.check-php85.yml` を重ねて `PHP_IMAGE=php:8.5.9-apache` を上書きすることで、`db`・`db-check`（MySQL 5.7.35）は共通のまま `web` だけPHP 8.5系にした専用環境（Compose project `holidays-webhook-server-check-php85`）を構築する。基本的な検証フローは `make check` と同じだが、`check-php85` では `composer install` より前に、PHP 8.5.9の完全一致・Composerの実行可否・必要拡張（`pdo_mysql`・`intl`・`gd`・`zip`）の読み込みを専用コンテナ（`run --rm --no-deps`）で確認する。すべて確認できたら `composer install` → `web`/`db` 起動 → DB seed → `composer check-platform-reqs --no-dev` → `composer check` まで実行する。開発用・`make check` 用のどちらの環境にも一切触れない。
-
-Issue #215時点では、Laravel 8・依存関係（`nette/schema v1.3.2`・`nette/utils v4.0.5`。いずれもPHP上限が8.4）がPHP 8.5を正式サポートしておらず、`composer install`が失敗していた。この既知の非互換だけを検出した場合に後続を未実施のまま成功扱いにする一時的な判定処理（`src/scripts/php85-compat-check.php`）を経由していたが、Issue #216のLaravel 9更新でこれらの間接依存がPHP 8.5対応版（`nette/schema v1.3.5`・`nette/utils v4.1.5`）へ更新され、`composer install`がPHP 8.5.9でも成功するようになったため、一時的な処理は撤去した。
-
-隔離環境で実際に確認した結果、PHP 8.5.9で`composer install`から`composer check`（`composer:validate`/`composer:audit`/`composer:prod-check`/Laravel Pint/PHPStan(Larastan)/PHPUnit）まで、`make check`と同じ内容がすべて成功することを確認済みである（Issue #216のPull Request参照）。
+PHP 8.5系での互換確認環境（`docker-compose.check-php85.yml`、`make check-php85`、GitHub Actionsの`php85-compat`ジョブ）はIssue #215で、本番・開発用の標準PHPが8.2.30のままだった移行期間中に追加したものである。Issue #220でローカル・CIの標準PHPそのものをPHP 8.5.9へ昇格し、`docker/web/Dockerfile`の既定`PHP_IMAGE`を`php:8.5.9-apache`にしたことで、`make check`が常にPHP 8.5.9で実行されるようになり、この互換確認環境とは完全に重複した。リポジトリにbranch protectionは設定されておらず（Issue #220着手時に`gh api repos/.../branches/main/protection`で404「Branch not protected」を確認）、`php85-compat`はrequired checkではないため、Issue #220でこれらを削除し`make check`へ統合した。
 
 ## 3. 継続的インテグレーション
 
@@ -116,12 +112,13 @@ Dependabotを含めて通常のpull requestを使い、Pull Requestのコード�
 
 1. 対象コミットをチェックアウトする。
 2. `src/composer.lock` のハッシュを鍵として `src/vendor` をキャッシュする。
-3. `make check` を実行する。ローカルの `make check` と同じ手順で、開発環境とは別のCompose project（`docker-compose.check.yml`、Issue #233）上で、`.env.example` から `src/.env` を作成し、Webイメージ内の固定PHP 8.2.30・Composer 2.8.12で依存関係を導入し、`db` と `db-check` でMySQL 5.7.35の起動を待ち、データベースシーダーを実行し、PHP・Composerのバージョンと必要拡張を確認し、最後に `composer check`（`composer:validate` によるcomposer.json/lockの整合性検証 → `composer:audit`（`scripts/audit-guard.php`監査ラッパー経由）による既知の脆弱性監査 → `composer:prod-check` による本番向け依存関係のdry-run確認 → Laravel Pintによるフォーマット確認 → PHPStan/Larastanによる静的解析 → `--log-junit result.xml` 付きのPHPUnit）を実行する。Composer設定の不整合、新規の脆弱性アドバイザリ、フォーマット違反、新規の静的解析違反があれば失敗する（Issue #214）。`composer:audit` は素の`composer audit`を直接呼ばず、終了コード(0/1/2/3以外は異常)と`--format=json`出力の構造（`advisories`/`abandoned`フィールドの有無・JSONとして解析可能か）の両方を検証する監査ラッパーを経由する。これにより、Packagistへのアドバイザリ取得自体が失敗した場合（Composer 2.8.12で確認済みの挙動：例外を捕捉せず終了コード100・標準出力は空で異常終了）を「監査に成功しbaseline外の脆弱性がなかった」場合と区別し、取得失敗を成功として扱わない。`composer:latest` などの固定外イメージは使用しない。CIランナー自体が使い捨てのため既存環境との衝突は元々起きないが、ローカルでも同じ `make check` が安全に使えるよう検証専用のCompose projectを使っている。
+3. `make check` を実行する。ローカルの `make check` と同じ手順で、開発環境とは別のCompose project（`docker-compose.check.yml`、Issue #233）上で、`.env.example` から `src/.env` を作成し、Webイメージ内の固定PHP 8.5.9・Composer 2.8.12で依存関係を導入し（`PHP_VERSION === '8.5.9'`を機械的に検証する）、`db` と `db-check` でMySQL 5.7.35の起動を待ち、データベースシーダーを実行し、PHP・Composerのバージョンと必要拡張を確認し、最後に `composer check`（`composer:validate` によるcomposer.json/lockの整合性検証 → `composer:audit`（`scripts/audit-guard.php`監査ラッパー経由）による既知の脆弱性監査 → `composer:prod-check` による本番向け依存関係のdry-run確認 → Laravel Pintによるフォーマット確認 → PHPStan/Larastanによる静的解析 → `--log-junit result.xml` 付きのPHPUnit）を実行する。Composer設定の不整合、新規の脆弱性アドバイザリ、フォーマット違反、新規の静的解析違反があれば失敗する（Issue #214）。`composer:audit` は素の`composer audit`を直接呼ばず、終了コード(0/1/2/3以外は異常)と`--format=json`出力の構造（`advisories`/`abandoned`フィールドの有無・JSONとして解析可能か）の両方を検証する監査ラッパーを経由する。これにより、Packagistへのアドバイザリ取得自体が失敗した場合（Composer 2.8.12で確認済みの挙動：例外を捕捉せず終了コード100・標準出力は空で異常終了）を「監査に成功しbaseline外の脆弱性がなかった」場合と区別し、取得失敗を成功として扱わない。`composer:latest` などの固定外イメージは使用しない。CIランナー自体が使い捨てのため既存環境との衝突は元々起きないが、ローカルでも同じ `make check` が安全に使えるよう検証専用のCompose projectを使っている。
 4. `composer check` が出力した `src/result.xml`（bind mount経由でRunner側に残る）を使って、mainへのpushでは外部URLからのXSLTダウンロードとHTMLレポートへの変換を行う。追加のPHPUnit実行はしない。
 5. `make check` は、成功・失敗にかかわらず検証専用のCompose projectだけを対象に `docker compose down --volumes --remove-orphans` を実行して後処理する（Makefile内の`trap`によるcleanupで、workflow側からは呼ばない）。開発用の構成は元々このworkflow上に存在しないため影響しない。
 6. mainへのpushでは、テストレポートをartifactで公開jobへ渡し、`gh-pages` ブランチへ配置する。
 7. mainへのpushでは、テストとレポート公開の結果をSlackへ通知する。
-8. 上記1〜7とは別に、`php85-compat` ジョブが専用のCompose project（`holidays-webhook-server-check-php85`）で `make check-php85`（2.8節）を実行する（Issue #215）。`test`・テストレポート公開・Slack通知（`notify`）のいずれの `needs` にも含まれておらず、PHP 8.2.30側の検証結果とは独立に確認できる。Issue #216のLaravel 9更新以降は、`composer install`より前にPHP 8.5.9の完全一致・Composerの実行可否・必要拡張の読み込みを確認したうえで、`composer install`から`composer check`まで実行する通常のフローで実行しており、一時的な既知非互換判定処理は使用していない。
+
+旧`php85-compat`ジョブ（2.8節）は、標準の`test`ジョブがPHP 8.5.9で実行されるようになったため、Issue #220で完全に重複するものとして削除した。
 
 Pull Requestで実行するテストjobはリポジトリ内容の読み取り権限だけを持ち、Secretを使用しない。`gh-pages` への書き込み権限はmainへのpushでだけ実行する公開jobに限定する。
 
@@ -194,9 +191,9 @@ rsyncでは次を転送対象から除外する。
 
 リポジトリ上の条件は次のとおりである。
 
-- `composer.json`: PHP `^8.2`（Issue #218のLaravel 11更新に伴い`^8.1`から変更。Composer上の要件であり、本番・開発用DockerのPHPは引き続き8.2.30のまま）
-- ローカルDocker: PHP 8.2.30 + Apache
-- `composer.lock`: Laravel Framework 12.65.0（Issue #219でLaravel 11.55.0から更新）
+- `composer.json`: PHP `^8.3`（Issue #220のLaravel 13更新に伴い`^8.2`から変更。Composer上の最低要件であり、本番PHPは引き続き8.2.30のまま。Issue #226で本番PHPを8.5系へ切り替えるまで、この版を本番へデプロイしてはならない）
+- ローカルDocker: PHP 8.5.9 + Apache（Issue #220で8.2.30から昇格）
+- `composer.lock`: Laravel Framework 13.24.0（Issue #220でLaravel 12.65.0から更新）
 
 リポジトリ上の条件も、公開経路から本番のPHPバージョンと実行方式を証明するものではない。
 
@@ -234,7 +231,7 @@ Laravel側には、毎分、毎時、毎月のスケジュール定義がある�
 | 項目 | ローカル | 本番で確認できた範囲 |
 | --- | --- | --- |
 | Webサーバー | Apache | 公開応答はnginx |
-| PHP | Dockerの8.2.30 | 運用者確認ではXServerの8.2.30。公開経路からバージョンとServer APIは独立確認できない |
+| PHP | Dockerの8.5.9（Issue #220でローカル・CIの標準を8.2.30から昇格。composer.jsonの最低要件は`^8.3`） | 運用者確認ではXServerの8.2.30のまま（Issue #226で切り替え予定）。公開経路からバージョンとServer APIは独立確認できない |
 | データベース | MySQL Server 5.7.35 | `SELECT NOW()` の成功のみ確認、製品とバージョンは未確認 |
 | アプリケーション配置 | `src` をコンテナへバインドマウント | GitHub ActionsからSSHとrsyncで `src` の内容を転送 |
 | `.env` | 公開用 `.env.example` から、Git管理外の `src/.env` を作成 | 配備対象外で、サーバー側の既存ファイルを利用 |
@@ -249,7 +246,7 @@ Issue #208では変更せず、次の差異を記録する。
 
 - READMEのテスト起動ブランチ表記は `master`、実際のワークフローは `main` である。
 - ローカルのWebサーバーはApache、本番公開経路はnginxである。
-- ローカルPHPは8.2、本番PHPは運用者確認で8.2.30だが、実行基盤はローカルのApacheと本番のXServerで異なる。本番PHPのバージョンとServer APIは公開経路から独立確認できない。
+- ローカル・CIの標準PHPはIssue #220で8.5.9（`composer.json`の最低要件は`^8.3`）へ昇格した一方、本番PHPは運用者確認で8.2.30のままであり（Issue #226で切り替え予定）、実行基盤はローカルのApacheと本番のXServerで異なる。Laravel 13はPHP 8.3未満では動作しないため、Issue #226が完了するまでこのLaravel 13版を現在の本番（PHP 8.2.30）へデプロイしてはならない。本番PHPのバージョンとServer APIは公開経路から独立確認できない。
 - ローカルMySQLはDockerfileで固定されるが、本番データベースの製品とバージョンは記録されていない。
 - ローカルデータベースは初回起動SQLで作成するが、本番へのスキーマ適用処理はデプロイにない。
 - Laravel Schedulerの処理定義はあるが、実行基盤の設定はリポジトリにない。
