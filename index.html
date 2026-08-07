@@ -118,15 +118,15 @@
 </head>
 <body>
 <div>
-<h2>Test Totals: </h2>
+<h2>Test Totals: /var/www/html/phpunit.xml</h2>
 <table id="high-level">
 <tr>
 <td><b>Number of Tests:</b></td>
-<td>2</td>
+<td>67</td>
 </tr>
 <tr>
 <td><b>Number of Assertions:</b></td>
-<td>2</td>
+<td>136</td>
 </tr>
 <tr>
 <td><b>Number of Failures:</b></td>
@@ -138,7 +138,7 @@
 </tr>
 <tr>
 <td><b>Execution Time:</b></td>
-<td>0.084120</td>
+<td>1.042307</td>
 </tr>
 </table>
 </div>
@@ -153,12 +153,20 @@
 <th>Execution Time</th>
 </tr>
 <tr class="test-file">
+<th>/var/www/html/phpunit.xml</th>
+<td class="nr pass">67</td>
+<td class="nr pass">136</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time not-so-good-time">1.042307</td>
+</tr>
+<tr class="test-file">
 <th>Unit</th>
 <td class="nr pass">1</td>
 <td class="nr pass">1</td>
 <td class="nr pass">0</td>
 <td class="nr pass">0</td>
-<td class="time good-time">0.001525</td>
+<td class="time good-time">0.001933</td>
 </tr>
 <tr class="single-test">
 <th><a href="#Tests%5CUnit%5CExampleTest">Tests\Unit\ExampleTest</a></th>
@@ -166,15 +174,95 @@
 <td class="nr pass">1</td>
 <td class="nr pass">0</td>
 <td class="nr pass">0</td>
-<td class="time good-time">0.001525</td>
+<td class="time good-time">0.001933</td>
 </tr>
 <tr class="test-file">
 <th>Feature</th>
-<td class="nr pass">1</td>
-<td class="nr pass">1</td>
+<td class="nr pass">66</td>
+<td class="nr pass">135</td>
 <td class="nr pass">0</td>
 <td class="nr pass">0</td>
-<td class="time good-time">0.082595</td>
+<td class="time not-so-good-time">1.040375</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CApi%5CApiAuthenticationTest">Tests\Feature\Api\ApiAuthenticationTest</a></th>
+<td class="nr pass">3</td>
+<td class="nr pass">3</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.133474</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CApi%5CCalendarControllerTest">Tests\Feature\Api\CalendarControllerTest</a></th>
+<td class="nr pass">8</td>
+<td class="nr pass">18</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.086306</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CApi%5CCommandExecControllerTest">Tests\Feature\Api\CommandExecControllerTest</a></th>
+<td class="nr pass">8</td>
+<td class="nr pass">17</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.116437</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CApi%5CCommandsControllerTest">Tests\Feature\Api\CommandsControllerTest</a></th>
+<td class="nr pass">11</td>
+<td class="nr pass">23</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.143851</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CApi%5CCorsTest">Tests\Feature\Api\CorsTest</a></th>
+<td class="nr pass">2</td>
+<td class="nr pass">6</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.056954</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CApi%5CExecResultsControllerTest">Tests\Feature\Api\ExecResultsControllerTest</a></th>
+<td class="nr pass">4</td>
+<td class="nr pass">9</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.045938</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CApi%5COnetimeSkipsControllerTest">Tests\Feature\Api\OnetimeSkipsControllerTest</a></th>
+<td class="nr pass">6</td>
+<td class="nr pass">12</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.084532</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CConsole%5CDeleteOldExecResultCommandTest">Tests\Feature\Console\DeleteOldExecResultCommandTest</a></th>
+<td class="nr pass">2</td>
+<td class="nr pass">3</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.158776</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CConsole%5CTimeTriggerCommandTest">Tests\Feature\Console\TimeTriggerCommandTest</a></th>
+<td class="nr pass">16</td>
+<td class="nr pass">19</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.147688</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CConsole%5CUpdateHolidayCacheCommandTest">Tests\Feature\Console\UpdateHolidayCacheCommandTest</a></th>
+<td class="nr pass">1</td>
+<td class="nr pass">2</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.014457</td>
 </tr>
 <tr class="single-test">
 <th><a href="#Tests%5CFeature%5CExampleTest">Tests\Feature\ExampleTest</a></th>
@@ -182,7 +270,15 @@
 <td class="nr pass">1</td>
 <td class="nr pass">0</td>
 <td class="nr pass">0</td>
-<td class="time good-time">0.082595</td>
+<td class="time good-time">0.010061</td>
+</tr>
+<tr class="single-test">
+<th><a href="#Tests%5CFeature%5CWeb%5CGoogleLoginControllerTest">Tests\Feature\Web\GoogleLoginControllerTest</a></th>
+<td class="nr pass">4</td>
+<td class="nr pass">22</td>
+<td class="nr pass">0</td>
+<td class="nr pass">0</td>
+<td class="time good-time">0.041902</td>
 </tr>
 </table>
 </body>
