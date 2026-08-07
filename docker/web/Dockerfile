@@ -1,8 +1,6 @@
-# 既定はローカル・CIで固定しているPHP 8.2.30。PHP 8.5互換確認環境
-# （docker-compose.check-php85.yml、Issue #215）は、このDockerfileを
-# 変更せずビルド時に PHP_IMAGE だけ上書きして再利用する。
+# 既定はローカル・CIで固定しているPHP 8.5.9（Issue #220でPHP 8.2.30から昇格）。
 # FROMで参照するARGはファイル先頭（最初のFROMより前）で宣言する必要がある。
-ARG PHP_IMAGE=php:8.2.30-apache
+ARG PHP_IMAGE=php:8.5.9-apache
 
 FROM composer:2.8.12 AS composer
 

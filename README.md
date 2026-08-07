@@ -14,7 +14,9 @@ holidays-webhook のサーバーサイド
 - Docker Compose v2
 - Make
 
-ローカル環境では、Docker内のPHP 8.2.30、Composer 2.8.12、MySQL 5.7.35を使用する。ホスト側にPHPやComposerをインストールする必要はない。
+ローカル環境では、Docker内のPHP 8.5.9、Composer 2.8.12、MySQL 5.7.35を使用する（Issue #220でPHP 8.2.30から昇格）。ホスト側にPHPやComposerをインストールする必要はない。
+
+このリポジトリはLaravel 13（`composer.json`の`laravel/framework`は`^13.0`、最低PHP要件は`^8.3`）を使用している。ただし本番環境（XServer）は現時点でPHP 8.2.30のままであり、Laravel 13はPHP 8.3未満では動作しない。本番のPHPバージョン切り替えはIssue #226の範囲であり、**Issue #226が完了するまでこのLaravel 13版を現在の本番（PHP 8.2.30）へデプロイしてはならない**。デプロイは`v*`タグのpushでのみ起動する（`.github/workflows/deploy.yaml`）。
 
 ### 初回起動
 
@@ -117,18 +119,9 @@ make db-wipe CONFIRM=yes
 - 検証用DBはnamed volumeを持たない使い捨てで、`make check` の成功・失敗にかかわらず、検証用Compose projectだけを対象にcleanup（`docker compose down --volumes --remove-orphans`）する。
 - 一時的な `docker-compose.override.yml` は使用しない。検証用の構成は `docker-compose.check.yml` としてリポジトリに含まれている。
 
-### PHP 8.5互換確認環境（`make check-php85`）
+### PHP 8.5互換確認環境の廃止（旧`make check-php85`）
 
-本番・開発用は引き続きPHP 8.2.30を使用する。将来のPHP 8.5移行に向けて、`make check`と同じ手順をPHP 8.5系（`php:8.5.9-apache`、固定パッチバージョン）だけで実行できる環境を追加している（Issue #215）。
-
-```shell
-make check-php85
-```
-
-- `docker/web/Dockerfile` は変更せず、ビルド引数 `PHP_IMAGE` の上書き（`docker-compose.check-php85.yml`、`docker-compose.check.yml` と組み合わせて使う）だけでPHP 8.5イメージを再利用する。`db`・`db-check`（MySQL 5.7.35）は`make check`と共通のまま。
-- 専用のCompose project（`holidays-webhook-server-check-php85`）を使い、開発用・`make check`用のどちらのcontainer・network・volume・host portにも一切触れない。
-- 基本的な検証フローは`make check`と同じだが、`make check-php85`では`composer install`より前に、PHP 8.5.9の完全一致・Composerの実行可否・必要拡張（`pdo_mysql`・`intl`・`gd`・`zip`）の読み込みを専用コンテナ（`run --rm --no-deps`）で確認する。すべて確認できたら`composer install`→`web`/`db`起動→DB seed→`composer check-platform-reqs --no-dev`→`composer check`（`composer:validate`/`composer:audit`/`composer:prod-check`/Laravel Pint/PHPStan(Larastan)/PHPUnit）まで実行し、成功・失敗がそのまま`make check-php85`の結果になる。Issue #215時点ではLaravel 8・依存関係（`nette/schema`・`nette/utils`のPHP上限8.4）がPHP 8.5を正式サポートしておらず、既知の非互換を検出した場合だけ後続を未実施のまま成功扱いにする一時的な判定処理を経由していたが、Issue #216のLaravel 9更新でこれらの間接依存がPHP 8.5対応版へ更新されたため撤去した。
-- 異常終了などでcleanupが行われなかった場合は `make check-php85-clean` で検証専用projectだけを片付けられる。
+PHP 8.5系での互換確認環境は、Issue #215で標準のPHP 8.2.30とは別に追加していた（`docker-compose.check-php85.yml`、`make check-php85`、GitHub Actionsの`php85-compat`ジョブ）。Issue #220でローカル・CIの標準PHPそのものをPHP 8.5.9へ昇格したため、`make check`が常にPHP 8.5.9で実行されるようになり、この移行期間用の重複構成とは完全に同等になった。そのためIssue #220でこれらを削除し、`make check`へ統合した（`docker-compose.check-php85.yml`の削除、Makefileの`check-php85`/`check-php85-clean`ターゲットの削除、GitHub Actionsの`php85-compat`ジョブの削除。リポジトリにbranch protectionは設定されておらず、`php85-compat`はrequired checkではないことをIssue #220着手時に確認済み）。
 
 ### テスト
 
@@ -161,7 +154,7 @@ composer analyse             # PHPStan/Larastanを実行する
 
 これにより、「監査に成功しbaseline外の脆弱性がなかった」場合と「アドバイザリ取得先に到達できず結果を取得できなかった」場合を区別し、後者を「脆弱性なし」として誤成功させない。
 
-`composer:audit`（ラッパー）は、既知の脆弱性アドバイザリを`composer.json`の`config.audit.ignore`へ理由付きで記録し、新規のアドバイザリが増えた場合だけ失敗する構成にしている。Issue #214時点では44件だったbaselineは、Issue #216のLaravel 9更新で33件（依存更新）＋7件（`larastan/larastan`更新に伴う`composer/composer`の除去）が解消し、Issue #217のLaravel 10更新（`laravel/framework` 10.50.2）でファイルバリデーション不備（CVE-2025-27515）の1件がさらに解消したため3件になった。Issue #218のLaravel 11更新（`laravel/framework` 11.55.0）では同じ3件を再確認したが増減はなかった。Issue #219のLaravel 12更新（`laravel/framework` 12.65.0）で残る3件（`PKSA-3r5d-mb8f-1qw9`・`PKSA-mdq4-51ck-6kdq`・`PKSA-m5cs-t1y6-qpcs`、いずれもLaravel 12.60.0または12.61.1以降で修正）が解消し、baselineは0件になったため、`config.audit.ignore`は削除した。abandoned packageは引き続き0件。0件になったのはIssue #216で`fruitcake/laravel-cors`をLaravel 9内蔵の`Illuminate\Http\Middleware\HandleCors`へ置き換えたためであり、Issue #217では未使用の`laravel/sanctum`も削除したが、`laravel/sanctum`はabandoned packageではないため件数には影響していない。baseline解消の追跡はIssue #236、詳細はIssue #216のPull Request（#238）・Issue #217のPull Request（#239）・Issue #218のPull Request（#240）・Issue #219のPull Request（#242）を参照。
+`composer:audit`（ラッパー）は、既知の脆弱性アドバイザリを`composer.json`の`config.audit.ignore`へ理由付きで記録し、新規のアドバイザリが増えた場合だけ失敗する構成にしている。Issue #214時点では44件だったbaselineは、Issue #216のLaravel 9更新で33件（依存更新）＋7件（`larastan/larastan`更新に伴う`composer/composer`の除去）が解消し、Issue #217のLaravel 10更新（`laravel/framework` 10.50.2）でファイルバリデーション不備（CVE-2025-27515）の1件がさらに解消したため3件になった。Issue #218のLaravel 11更新（`laravel/framework` 11.55.0）では同じ3件を再確認したが増減はなかった。Issue #219のLaravel 12更新（`laravel/framework` 12.65.0）で残る3件（`PKSA-3r5d-mb8f-1qw9`・`PKSA-mdq4-51ck-6kdq`・`PKSA-m5cs-t1y6-qpcs`、いずれもLaravel 12.60.0または12.61.1以降で修正）が解消し、baselineは0件になったため、`config.audit.ignore`は削除した。abandoned packageは引き続き0件。0件になったのはIssue #216で`fruitcake/laravel-cors`をLaravel 9内蔵の`Illuminate\Http\Middleware\HandleCors`へ置き換えたためであり、Issue #217では未使用の`laravel/sanctum`も削除したが、`laravel/sanctum`はabandoned packageではないため件数には影響していない。Issue #220のLaravel 13更新（`laravel/framework` 13.24.0）でも引き続きadvisories 0件・abandoned package 0件を確認しており、`config.audit.ignore`は追加していない。baseline解消の追跡はIssue #236、詳細はIssue #216のPull Request（#238）・Issue #217のPull Request（#239）・Issue #218のPull Request（#240）・Issue #219のPull Request（#242）・Issue #220のPull Requestを参照。
 
 ### ローカルで Google 認証
 
@@ -185,6 +178,6 @@ composer analyse             # PHPStan/Larastanを実行する
 
 ## テスト
 
-Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull Requestでは、GitHub Actionsがローカルと同じ固定PHP 8.2.30・Composer 2.8.12・MySQL 5.7.35で `make check` を実行する。`make check` はLaravel Pintによるフォーマット確認、PHPStan/Larastanによる静的解析、既存テストを実行するため、フォーマット違反または新規の静的解析違反があるとCIは失敗する。mainにプッシュした場合だけ、テスト結果を[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)へアップし、Slackへ通知する。
+Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull Requestでは、GitHub Actionsがローカルと同じ固定PHP 8.5.9・Composer 2.8.12・MySQL 5.7.35で `make check` を実行する。`make check` はLaravel Pintによるフォーマット確認、PHPStan/Larastanによる静的解析、既存テストを実行するため、フォーマット違反または新規の静的解析違反があるとCIは失敗する。`make check`自体がPHPバージョンを`PHP_VERSION === '8.5.9'`で機械的に検証するため、ビルド引数の設定誤りがあればCIはここで失敗する。mainにプッシュした場合だけ、テスト結果を[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)へアップし、Slackへ通知する。
 
-同じワークフロー内で `php85-compat` ジョブが `make check-php85`（PHP 8.5系での互換確認、前述）を実行する（Issue #215）。`test`・`publish-test-report`・`notify`（Slack通知）のいずれの`needs`にも含まれておらず、PHP 8.2.30側の検証結果とは独立に結果を確認できる。Issue #216のLaravel 9更新以降は、`composer install`より前にPHP 8.5.9の完全一致・Composerの実行可否・必要拡張の読み込みを確認したうえで、`composer install`から`composer check`まで実行するフロー（成功・失敗がそのままジョブの結果になる）で実行しており、一時的な既知非互換判定処理は使用していない。
+旧`php85-compat`ジョブ（PHP 8.5系での互換確認専用、Issue #215）は、標準の`test`ジョブがPHP 8.5.9で実行されるようになったため、Issue #220で完全に重複するものとして削除した。
