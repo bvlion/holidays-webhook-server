@@ -2,6 +2,8 @@
 
 holidays-webhook のサーバーサイド
 
+AIエージェント（Codex等）がこのリポジトリで作業する場合は、先に [`AGENTS.md`](AGENTS.md) を読み、安全上のルール（mainへ直接コミットしない、破壊的なDocker操作を無断で行わない等）に従うこと。
+
 ## FW
 
 - [Laravel](http://laravel.jp/)
@@ -181,3 +183,26 @@ composer analyse             # PHPStan/Larastanを実行する
 Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull Requestでは、GitHub Actionsがローカルと同じ固定PHP 8.5.9・Composer 2.8.12・MySQL 5.7.35で `make check` を実行する。`make check` はLaravel Pintによるフォーマット確認、PHPStan/Larastanによる静的解析、既存テストを実行するため、フォーマット違反または新規の静的解析違反があるとCIは失敗する。`make check`自体がPHPバージョンを`PHP_VERSION === '8.5.9'`で機械的に検証するため、ビルド引数の設定誤りがあればCIはここで失敗する。mainにプッシュした場合だけ、テスト結果を[GitHub Pages](https://bvlion.github.io/holidays-webhook-server/index.html)へアップし、Slackへ通知する。
 
 旧`php85-compat`ジョブ（PHP 8.5系での互換確認専用、Issue #215）は、標準の`test`ジョブがPHP 8.5.9で実行されるようになったため、Issue #220で完全に重複するものとして削除した。
+
+## 安全上の注意
+
+- mainブランチへ直接コミットしない。Issueごとに専用のbranch / worktreeで作業し、通常のPull Requestを作成する。
+- `src/.env` は初回作成後に不要な上書き・再生成をしない。`make setup` は既存の `src/.env` を上書きしない。
+- 開発用DBを破壊する操作（`make db-wipe`、`--volumes` を付けた `docker compose down`、`docker volume rm` 等）は、明示的な許可なく実行しない。詳細は上記「完全初期化（危険な操作）」節を参照する。
+- 通常の検証（フォーマット確認・静的解析・テスト）には、開発環境から分離された `make check` を使う。開発用のcontainer・network・volume・DBには触れない。
+- 秘密情報（`.env` の実値、APIキー、トークン、SSH鍵等）をコード・ログ・Issue・Pull Requestへ書かない。詳細は [`docs/secrets-management.md`](docs/secrets-management.md) を参照する。
+- 本番環境（XServer）は現時点でPHP 8.2.30のままであり、Laravel 13はPHP 8.3未満では動作しない。**Issue #226が完了するまで、このLaravel 13版を現在の本番へデプロイしてはならない。** デプロイは `v*` タグのpushでのみ起動する（`.github/workflows/deploy.yaml`）。
+- AIエージェントとして作業する場合の詳細な安全ルールは [`AGENTS.md`](AGENTS.md) を参照する。
+
+## ドキュメント一覧
+
+| 文書 | 内容 |
+| --- | --- |
+| [`AGENTS.md`](AGENTS.md) | AIエージェント向けの作業ルール・安全上の必須事項 |
+| [`docs/architecture.md`](docs/architecture.md) | 継続運用向けの現行アーキテクチャ（責務・エントリーポイント・外部連携の境界） |
+| [`docs/domain.md`](docs/domain.md) | コードから読み取れる主要ドメインルール |
+| [`docs/current-architecture.md`](docs/current-architecture.md) | Issue #208時点の詳細な実装棚卸し（現状差異・後続Issue候補を含む） |
+| [`docs/current-operations.md`](docs/current-operations.md) | ローカル・CI・本番の運用詳細と確認状況 |
+| [`docs/secrets-management.md`](docs/secrets-management.md) | 秘密情報・個人情報・ログの管理方針 |
+| [`docs/dependency-updates.md`](docs/dependency-updates.md) | Dependabotによる依存関係更新の運用方針 |
+| [`doc/api/`](doc/api) | 一部APIの詳細仕様 |
