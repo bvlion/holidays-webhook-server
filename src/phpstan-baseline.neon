@@ -19,16 +19,3 @@ parameters:
 			message: "#^Caught class App\\\\Http\\\\Controllers\\\\Api\\\\Exception not found\\.$#"
 			count: 2
 			path: app/Http/Controllers/Api/CalendarController.php
-
-		-
-			message: "#^Variable \\$holidays might not be defined\\.$#"
-			count: 2
-			path: app/Libs/HolidayList.php
-
-		-
-			# Larastan 3で新設されたルール(larastan.noEnvCallsOutsideOfConfig)による
-			# 新規検出。既存のconfig/構成を変更しないためbaseline化する。
-			message: "#^Called 'env' outside of the config directory which returns null when the config is cached, use 'config'\\.$#"
-			identifier: larastan.noEnvCallsOutsideOfConfig
-			count: 1
-			path: app/Libs/HolidayList.php

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Console;
 
+use App\Exceptions\HolidayFetchException;
+use App\Libs\SchedulerHeartbeat;
 use App\Models\Calender;
 use App\Models\Command;
 use App\Models\ExecResult;
@@ -9,12 +11,16 @@ use App\Models\OnetimeSkip;
 use App\Models\TimeTrigger;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Request as Psr7Request;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Mockery;
 use Tests\Doubles\FakeHolidayList;
 use Tests\TestCase;
 
@@ -31,6 +37,15 @@ class TimeTriggerCommandTest extends TestCase
     use DatabaseTransactions;
 
     private const FIXED_JST_DATETIME = '2026-06-15 10:00:00';
+
+    protected function tearDown(): void
+    {
+        $path = app(SchedulerHeartbeat::class)->path();
+        @unlink($path);
+        @unlink($path.'.lock');
+
+        parent::tearDown();
+    }
 
     private function freezeDatabaseNow(string $jstDateTime = self::FIXED_JST_DATETIME): void
     {
@@ -314,5 +329,103 @@ class TimeTriggerCommandTest extends TestCase
         Artisan::call('time:trigger');
 
         $this->assertSame(1, ExecResult::where('trigger_id', $trigger->id)->count());
+    }
+
+    public function test_外部_htt_pがエラー応答を返した場合はそのステータスがexec_resultsへ反映される()
+    {
+        $this->freezeDatabaseNow();
+        $this->fakeHolidaysForToday(false);
+        $this->bindMockClient([new Response(500, [], 'server-error')]);
+        $trigger = $this->createTrigger();
+
+        Artisan::call('time:trigger');
+
+        $result = ExecResult::where('trigger_id', $trigger->id)->first();
+        $this->assertNotNull($result);
+        $this->assertSame(500, $result->response_code);
+    }
+
+    public function test_レスポンスを伴わない接続失敗はexec_resultsへ安全な固定表現で保存される()
+    {
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(function (string $message, array $context) {
+                $context_json = json_encode($context);
+
+                return $message === 'external_http.no_response'
+                    && $context['integration'] === 'time_trigger'
+                    && ! str_contains($context_json, 'secret.example.test')
+                    && ! str_contains($context_json, 'token=leak');
+            });
+        $this->freezeDatabaseNow();
+        $this->fakeHolidaysForToday(false);
+        $this->bindMockClient([
+            new ConnectException(
+                'cURL error 6: Could not resolve host: secret.example.test?token=leak',
+                new Psr7Request('GET', 'http://secret.example.test?token=leak')
+            ),
+        ]);
+        $trigger = $this->createTrigger();
+
+        Artisan::call('time:trigger');
+
+        $result = ExecResult::where('trigger_id', $trigger->id)->first();
+        $this->assertNotNull($result);
+        $this->assertSame(0, $result->response_code);
+        $decodedBody = json_decode($result->response_body, true);
+        $this->assertSame('no_response', $decodedBody['error']);
+        $this->assertSame(ConnectException::class, $decodedBody['exception']);
+
+        // 個々の外部HTTP失敗はscheduler自体の成功判定には影響しない。
+        $heartbeat = app(SchedulerHeartbeat::class);
+        $this->assertSame('success', $heartbeat->status('time:trigger')['status']);
+    }
+
+    public function test_scheduler成功時にheartbeatが更新される()
+    {
+        $this->freezeDatabaseNow();
+        $this->fakeHolidaysForToday(false);
+        $this->bindMockClient([new Response(200, [], 'ok')]);
+        $this->createTrigger();
+
+        Artisan::call('time:trigger');
+
+        $heartbeat = app(SchedulerHeartbeat::class);
+        $status = $heartbeat->status('time:trigger');
+        $this->assertSame('success', $status['status']);
+        $this->assertNotEmpty($status['last_success_at']);
+        $this->assertTrue($heartbeat->isFresh('time:trigger', 60));
+    }
+
+    public function test_google_calendar失敗時は該当トリガーだけ安全にスキップされ_schedulerは失敗扱いにならない()
+    {
+        Log::shouldReceive('warning')
+            ->once()
+            ->with('time_trigger.holiday_lookup_failed', Mockery::on(function (array $context) {
+                return $context['exception'] === HolidayFetchException::class;
+            }));
+        $this->freezeDatabaseNow();
+        $this->bindMockClient([new Response(200, [], 'ok')]);
+        $failingHolidayList = new class
+        {
+            public function getHolidays($code, $year)
+            {
+                throw new HolidayFetchException('Google Calendar APIからの祝日取得に失敗しました。');
+            }
+
+            public function clear()
+            {
+                return [];
+            }
+        };
+        $this->app->instance('HolidayList', $failingHolidayList);
+        $trigger = $this->createTrigger(['holiday_decision' => 'not_check']);
+
+        Artisan::call('time:trigger');
+
+        $this->assertSame(0, ExecResult::where('trigger_id', $trigger->id)->count());
+
+        $heartbeat = app(SchedulerHeartbeat::class);
+        $this->assertSame('success', $heartbeat->status('time:trigger')['status']);
     }
 }

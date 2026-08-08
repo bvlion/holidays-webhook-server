@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Libs\SchedulerHeartbeat;
 use Illuminate\Console\Command;
+use Throwable;
 
 class UpdateHolidayCache extends Command
 {
@@ -30,6 +32,8 @@ class UpdateHolidayCache extends Command
         parent::__construct();
     }
 
+    private const HEARTBEAT_TASK = 'holidays:update';
+
     /**
      * Execute the console command.
      *
@@ -37,9 +41,18 @@ class UpdateHolidayCache extends Command
      */
     public function handle()
     {
-        app()->make('HolidayList')->clear();
-        // 日本だけキャッシュしておく
-        app()->make('HolidayList')->getHolidays('jp', date('Y'));
-        app()->make('HolidayList')->getHolidays('jp', date('Y') + 1);
+        $heartbeat = app(SchedulerHeartbeat::class);
+
+        try {
+            app()->make('HolidayList')->clear();
+            // 日本だけキャッシュしておく
+            app()->make('HolidayList')->getHolidays('jp', date('Y'));
+            app()->make('HolidayList')->getHolidays('jp', date('Y') + 1);
+            $heartbeat->recordSuccess(self::HEARTBEAT_TASK);
+        } catch (Throwable $e) {
+            $heartbeat->recordFailure(self::HEARTBEAT_TASK);
+
+            throw $e;
+        }
     }
 }

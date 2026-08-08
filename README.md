@@ -203,6 +203,7 @@ Pull Requestの作成・更新、mainへのpush、Dependabotが作成するPull 
 | [`docs/domain.md`](docs/domain.md) | コードから読み取れる主要ドメインルール |
 | [`docs/current-architecture.md`](docs/current-architecture.md) | Issue #208時点の詳細な実装棚卸し（現状差異・後続Issue候補を含む） |
 | [`docs/current-operations.md`](docs/current-operations.md) | ローカル・CI・本番の運用詳細と確認状況 |
+| [`docs/monitoring.md`](docs/monitoring.md) | `GET /health`・scheduler heartbeat・外部連携失敗時の確認方法 |
 | [`docs/secrets-management.md`](docs/secrets-management.md) | 秘密情報・個人情報・ログの管理方針 |
 | [`docs/dependency-updates.md`](docs/dependency-updates.md) | Dependabotによる依存関係更新の運用方針 |
 | [`doc/api/`](doc/api) | 一部APIの詳細仕様 |

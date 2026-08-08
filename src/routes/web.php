@@ -10,6 +10,8 @@ Route::get('/', function () {
     ];
 });
 
+Route::get('/health', 'HealthController@index');
+
 Route::get('/holiday/cache/clear', function () {
     return [
         'holidays' => app()->make('HolidayList')->clear(),
