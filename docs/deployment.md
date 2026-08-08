@@ -33,7 +33,7 @@ AIエージェントは、本番XServerへのSSH接続、本番DBへの直接接
 6. `rsync -av` で `src/` の内容を配備先へ転送する。`--exclude` は `logs`・`phpunit.xml`・`.env`・`tests` の4つ。
 7. `8398a7/action-slack@v3` でSlackへ結果を通知する。
 
-この文書整備の一環として、Slack通知ステップに `if: always()` を追加した（3.5節参照）。それ以外の起動条件・Secrets構成・Actionsバージョンは変更していない。
+この文書整備の一環として、Slack通知ステップに `if: always()` を追加した（3.1節参照）。それ以外の起動条件・Secrets構成・Actionsバージョンは変更していない。
 
 ### 2.1 現在のdeployに含まれないもの
 
