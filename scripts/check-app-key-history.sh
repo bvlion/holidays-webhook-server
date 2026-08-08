@@ -65,7 +65,19 @@ for path in "${TARGET_PATHS[@]}"; do
     while IFS= read -r line; do
       [ -z "$line" ] && continue
       value="${line#APP_KEY=}"
-      value="$(printf '%s' "$value" | sed -e 's/\r$//' -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'\$//")"
+      value="${value%$'\r'}"
+      # 前後が同じ種類のquoteで対になっている場合だけ1ペアを除去する。
+      # 片側だけquoteがある、または左右で種類が異なる場合は不正値として空にする。
+      vlen=${#value}
+      if [ "$vlen" -ge 2 ] && [ "${value:0:1}" = '"' ] && [ "${value: -1}" = '"' ]; then
+        value="${value:1:vlen-2}"
+      elif [ "$vlen" -ge 2 ] && [ "${value:0:1}" = "'" ] && [ "${value: -1}" = "'" ]; then
+        value="${value:1:vlen-2}"
+      elif [ "${value:0:1}" != '"' ] && [ "${value: -1}" != '"' ] && [ "${value:0:1}" != "'" ] && [ "${value: -1}" != "'" ]; then
+        : # quoteなし。そのまま扱う
+      else
+        value="" # 片側だけ、または左右で異なるquote。不正値として扱う
+      fi
       if [ -z "$value" ] || [ "$value" = "$PLACEHOLDER_APP_KEY" ]; then
         value=""
         continue

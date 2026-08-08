@@ -171,15 +171,32 @@ XServerで行うのは、**現在の本番 `APP_KEY` のSHA-256取得まで**で
 
 1. 普段運用で使っている接続方法で、本番XServerへSSH接続する。接続先ホスト・ポート・ユーザーはGitHub Actions Secretの `SSH_HOST`・`SSH_PORT`・`SSH_USER` に対応する値だが、これらのSecret名がローカルshellの環境変数として自動的に定義されているわけではない。運用者が把握している実際の接続情報を用いる。
 2. 本番配備ディレクトリ(Actions Secretの `SSH_DIR` に対応するディレクトリ)へ `cd` する。
-3. 接続したシェル上で、次のPHPコマンドをそのまま実行する。`.env` から `APP_KEY=` 行を安全に取得し、定義が存在しない場合・ちょうど1件でない場合・値が空または想定するLaravelの `base64:` 形式(32byteをbase64化した43文字+パディング1文字)に一致しない場合はエラー終了し、正常時だけ64桁のSHA-256を1行出力する。
+3. 接続したシェル上で、次のPHPコマンドをそのまま実行する。`.env` から `APP_KEY=` 行を安全に取得し、定義が存在しない場合・ちょうど1件でない場合・値が空または想定するLaravelの `base64:` 形式(32byteをbase64化した43文字+パディング1文字)に一致しない場合はエラー終了し、正常時だけ64桁のSHA-256を1行出力する。前後を囲む `"` または `'` は、両端が同じ種類で対になっている場合だけ1ペアを除去する。片側だけにquoteがある場合や左右で種類が異なる場合は、除去せず不正値としてエラー終了する。
 
 ```shell
 php -r '
+function unquote_app_key_value($raw) {
+    $len = strlen($raw);
+    $startsDouble = $len > 0 && $raw[0] === "\x22";
+    $endsDouble = $len > 0 && $raw[$len - 1] === "\x22";
+    $startsSingle = $len > 0 && $raw[0] === "\x27";
+    $endsSingle = $len > 0 && $raw[$len - 1] === "\x27";
+    if ($startsDouble && $endsDouble && $len >= 2) {
+        return substr($raw, 1, $len - 2);
+    }
+    if ($startsSingle && $endsSingle && $len >= 2) {
+        return substr($raw, 1, $len - 2);
+    }
+    if (!$startsDouble && !$endsDouble && !$startsSingle && !$endsSingle) {
+        return $raw;
+    }
+    return null;
+}
 $lines = file(".env", FILE_IGNORE_NEW_LINES);
 $matches = [];
 foreach ($lines as $line) {
     if (strncmp($line, "APP_KEY=", 8) === 0) {
-        $matches[] = trim(substr($line, 8), " \t\r\n\"\x27");
+        $matches[] = unquote_app_key_value(trim(substr($line, 8), " \t\r\n"));
     }
 }
 if (count($matches) !== 1) {
@@ -187,8 +204,8 @@ if (count($matches) !== 1) {
     exit(1);
 }
 $value = $matches[0];
-if ($value === "" || !preg_match("/^base64:[A-Za-z0-9+\/]{43}=$/", $value)) {
-    fwrite(STDERR, "APP_KEY is empty or not in the expected format\n");
+if ($value === null || $value === "" || !preg_match("/^base64:[A-Za-z0-9+\/]{43}=$/", $value)) {
+    fwrite(STDERR, "APP_KEY is empty, unquoted improperly, or not in the expected format\n");
     exit(1);
 }
 echo hash("sha256", $value), PHP_EOL;
@@ -210,12 +227,13 @@ Git履歴を保持する信頼できるローカルcloneで、`.env`・`src/.env
 - ユニークな実値形式の履歴上 `APP_KEY` が2種類であることを確認する。2種類でなければ安全側に倒してエラー終了する
 - 最終的な標準出力は `MATCH` または `NO_MATCH` のみとする
 
-実行例:
+実行例(スクリプトは `read -r -s` で入力を受け取るため、入力したSHA-256は画面に表示されない。以下は入力後にEnterを押した時点の出力例であり、`MATCH`/`NO_MATCH` はどちらが表示されるかを固定するものではなく、実際の照合結果に応じて一方だけが出力される):
 
 ```shell
-scripts/check-app-key-history.sh
-本番 APP_KEY の SHA-256 (64桁16進)を入力してください: ********************************************************
-MATCH
+$ scripts/check-app-key-history.sh
+本番 APP_KEY の SHA-256 (64桁16進)を入力してください:
+
+NO_MATCH
 ```
 
 ### 7.5 照合結果の記録
@@ -231,9 +249,11 @@ MATCH
 - [ ] 設定キャッシュを再生成し、ログイン、Googleコールバック、主要APIを確認する
 - [ ] 旧 `APP_KEY` をバックアップ、ログ、共有メモから削除する
 
-### 7.7 Issue #209全体に対する秘密情報確認(`MATCH` / `NO_MATCH` に依存しない)
+### 7.7 APP_KEY照合結果に依存しない秘密情報管理チェックリスト
 
-以下は、本番 `APP_KEY` の照合結果が `MATCH` か `NO_MATCH` かに関わらず必要な確認である。Issue #209はAPP_KEYだけでなく、Google認証情報、GitHub Actions Secrets、Slack Webhook URL、SSH秘密鍵、認証JSON等を監査対象としており、これらの確認要否は今回のAPP_KEY照合結果に左右されない。
+以下は、本番 `APP_KEY` の照合結果が `MATCH` か `NO_MATCH` かに関わらず、Google認証情報やGitHub Actions Secrets等について漏洩が疑われる、または確認された場合に、失効・再発行等の要否を判断するためのチェックリストである。これらの要否は今回のAPP_KEY照合結果に左右されない。
+
+このチェックリストはAPP_KEY照合結果とは独立した秘密情報管理上の確認事項であり、全項目の完了をIssue #209の新しいclose必須条件とはしない(8章参照)。
 
 - [ ] Google Cloud Consoleで、リポジトリのプレースホルダー以外に漏洩したOAuthクライアントシークレットまたはAPIキーがないことを確認する
 - [ ] 漏洩が確認されたGoogle認証情報がある場合は失効・再発行し、本番 `.env` を更新する
@@ -245,26 +265,29 @@ Git履歴の一括書き換え自体は、既存clone、未完了ブランチ、
 
 ## 8. Issue #209を閉じる条件
 
-Issue #209は、このPull Requestのマージだけでは閉じない。運用者が7.1〜7.4の手順で本番XServerの `APP_KEY` とGit履歴上の2種類を安全な環境で照合し、値を一切記録せず、`MATCH` または `NO_MATCH` という照合結果だけをIssue #209で確認できる状態になってから、次のいずれかに従って閉じる。
+Issue #209本来の完了条件は、リポジトリ内に実値の秘密情報が残っていないこと、新規開発者とCIがサンプル設定で起動・テストできること、本番秘密情報の配置方法が文書化されていることである。これらはリポジトリ側の監査・修正としてすでに対応済みであり、Issue #209を閉じるために残っているのは、人間による本番 `APP_KEY` とGit履歴上の2種類の照合結果確認である。
 
-いずれの場合も、7.7に挙げたAPP_KEY以外の秘密情報確認(Google認証情報、GitHub Actions Secrets等)は、今回のAPP_KEY照合結果に関わらず別途完了させる必要がある。これらはAPP_KEYの `MATCH` / `NO_MATCH` によって要否が変わるものではない。
+Issue #209は、このPull Requestのマージだけでは閉じない。運用者が7.1〜7.4の手順で本番XServerの `APP_KEY` とGit履歴上の2種類を安全な環境で照合し、値を一切記録せず、`MATCH` または `NO_MATCH` という照合結果だけをIssue #209で確認できる状態になってから、次のいずれかに従って判断する。
+
+7.7はAPP_KEY照合結果とは独立した秘密情報管理上のチェックリストであり、漏洩が疑われる、または確認された場合に失効・再発行等の要否を判断するためのものである。7.7の全項目を完了させることを、Issue #209の新しいclose必須条件とはしない。
 
 ### `NO_MATCH` の場合
 
 現在の本番キーは、今回確認されたGit履歴上の公開済みキーとは異なる。
 
 - 照合結果 `NO_MATCH` のみをIssue #209で確認できる状態にする
-- 今回の漏洩を理由とした `APP_KEY` 変更(7.6)は不要である
-- 7.7の確認と他の完了条件に問題がなければ、Issue #209はclose可能である
+- 今回確認されたGit履歴上のAPP_KEY漏洩を理由とした `APP_KEY` 変更(7.6)は不要である
+- Issue #209本来の完了条件が満たされており、本Pull Requestで残作業としていたAPP_KEY照合も完了したため、Issue #209はclose可能である
 
 ### `MATCH` の場合
 
 現在の本番キーが公開済みキーと同一である。
 
 - 照合結果 `MATCH` のみをIssue #209で確認できる状態にする
-- Issue #209はその場では即closeしない
-- 7.6のAPP_KEY固有チェックリストに従って影響確認へ進む
-- 本番キー変更の必要性と実施手順は、照合結果に基づいて運用者が別途判断する
+- 現在の本番APP_KEYも公開済みと判断する
+- その場ではIssue #209をcloseしない
+- 7.6のAPP_KEY固有チェックリストに従い、影響確認とローテーション対応を整理する
+- 安全な状態になったことを確認してから、Issue #209のcloseを判断する
 
 いずれの場合も、本番キーの変更、影響確認、秘密情報の失効・再発行、Git履歴の書き換えは、このPull Requestの対象外とする。
 
