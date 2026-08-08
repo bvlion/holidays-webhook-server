@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Libs\SchedulerHeartbeat;
 use App\Models\ExecResult;
 use Illuminate\Console\Command;
+use Throwable;
 
 class DeleteOldExecResultCommand extends Command
 {
@@ -31,6 +33,8 @@ class DeleteOldExecResultCommand extends Command
         parent::__construct();
     }
 
+    private const HEARTBEAT_TASK = 'results:delete';
+
     /**
      * Execute the console command.
      *
@@ -38,25 +42,34 @@ class DeleteOldExecResultCommand extends Command
      */
     public function handle()
     {
-        $results = ExecResult::orderBy('id', 'desc')->get();
-        $hold = []; // command_id をキーにした保持対象
-        $delete = []; // 削除対象 ID 配列
-        foreach ($results as $result) {
-            // キーがなければ新規追加
-            if (! array_key_exists($result->command_id, $hold)) {
-                $hold[$result->command_id] = [$result];
+        $heartbeat = app(SchedulerHeartbeat::class);
 
-                continue;
-            }
-            // 100件未満なら保持対象に追加
-            if (count($hold[$result->command_id]) < 100) {
-                array_push($hold[$result->command_id], $result);
+        try {
+            $results = ExecResult::orderBy('id', 'desc')->get();
+            $hold = []; // command_id をキーにした保持対象
+            $delete = []; // 削除対象 ID 配列
+            foreach ($results as $result) {
+                // キーがなければ新規追加
+                if (! array_key_exists($result->command_id, $hold)) {
+                    $hold[$result->command_id] = [$result];
 
-                continue;
+                    continue;
+                }
+                // 100件未満なら保持対象に追加
+                if (count($hold[$result->command_id]) < 100) {
+                    array_push($hold[$result->command_id], $result);
+
+                    continue;
+                }
+                // 削除対象に追加
+                array_push($delete, $result->id);
             }
-            // 削除対象に追加
-            array_push($delete, $result->id);
+            ExecResult::whereIn('id', $delete)->delete();
+            $heartbeat->recordSuccess(self::HEARTBEAT_TASK);
+        } catch (Throwable $e) {
+            $heartbeat->recordFailure(self::HEARTBEAT_TASK);
+
+            throw $e;
         }
-        ExecResult::whereIn('id', $delete)->delete();
     }
 }

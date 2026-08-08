@@ -6,12 +6,14 @@ use App\Models\Command;
 use App\Models\SummarizeCommand;
 use App\Models\User;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Request as Psr7Request;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class CommandExecControllerTest extends TestCase
@@ -177,21 +179,71 @@ class CommandExecControllerTest extends TestCase
         $this->assertSame(500, $body['response_code']);
     }
 
-    public function test_レスポンスを伴わない_request_exceptionは現状_type_errorになる()
+    public function test_レスポンスを伴わない接続失敗は_type_errorにならず安全な固定表現で結果が返る()
     {
-        // 保存処理は必ずレスポンスオブジェクトを受け取る前提だが、
-        // RequestException::getResponse() は null を返し得るため現状は例外になる
-        // (docs/current-architecture.md 10.4)。修正はこのIssueの対象外であり、
-        // 現行仕様を保護する回帰テストとして記録する。
+        // Issue #225: RequestException::getResponse() が null になり得る
+        // (DNS失敗・connect timeout・connection refused等)接続失敗を、
+        // TypeErrorで落とさずに安全な固定表現へ変換する新挙動のテスト。
+        // #212で追加されたTypeErrorを記録する回帰テストはこの挙動へ更新した。
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(function (string $message, array $context) {
+                $context_json = json_encode($context);
+
+                return $message === 'external_http.no_response'
+                    && $context['integration'] === 'command_exec'
+                    && ! str_contains($context_json, 'secret.example.test')
+                    && ! str_contains($context_json, 'token=leak');
+            });
         $this->bindMockClient([
-            new RequestException('connection failed', new Psr7Request('GET', 'http://example.test')),
+            new ConnectException(
+                'cURL error 6: Could not resolve host: secret.example.test?token=leak',
+                new Psr7Request('GET', 'http://secret.example.test?token=leak')
+            ),
         ]);
         $user = User::factory()->create();
         $command = Command::factory()->create(['target_id' => $user->id, 'target_type' => 'user']);
 
-        $this->withoutExceptionHandling();
-        $this->expectException(\TypeError::class);
+        $response = $this->actingAs($user, 'api')
+            ->postJson('/api/exec/command/'.$command->id);
 
-        $this->actingAs($user, 'api')->postJson('/api/exec/command/'.$command->id);
+        $response->assertStatus(200);
+        $body = $response->json()[0];
+        $this->assertSame(0, $body['response_code']);
+        $decodedBody = json_decode($body['response_body'], true);
+        $this->assertSame('no_response', $decodedBody['error']);
+        $this->assertSame(ConnectException::class, $decodedBody['exception']);
+    }
+
+    public function test_response_を伴わない_request_exceptionも_type_errorにならず安全な固定表現で結果が返る()
+    {
+        // ConnectExceptionではない、レスポンスを持たないRequestException
+        // （接続確立後の転送エラー等）も同様に扱われることを確認する。
+        $this->bindMockClient([
+            new RequestException('Error completing request', new Psr7Request('GET', 'http://example.test')),
+        ]);
+        $user = User::factory()->create();
+        $command = Command::factory()->create(['target_id' => $user->id, 'target_type' => 'user']);
+
+        $response = $this->actingAs($user, 'api')
+            ->postJson('/api/exec/command/'.$command->id);
+
+        $response->assertStatus(200);
+        $body = $response->json()[0];
+        $this->assertSame(0, $body['response_code']);
+    }
+
+    public function test_response_ありの_request_exceptionは_no_responseとして扱われない()
+    {
+        $this->bindMockClient([new Response(503, [], 'unavailable')]);
+        $user = User::factory()->create();
+        $command = Command::factory()->create(['target_id' => $user->id, 'target_type' => 'user']);
+
+        $response = $this->actingAs($user, 'api')
+            ->postJson('/api/exec/command/'.$command->id);
+
+        $response->assertStatus(200);
+        $body = $response->json()[0];
+        $this->assertSame(503, $body['response_code']);
     }
 }

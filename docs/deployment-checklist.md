@@ -40,6 +40,7 @@ Issue #226でPHP 8.5への本番切り替えを行う際も、このチェック
 ## 主要機能確認
 
 - [ ] 公開URLのルートが200で応答する
+- [ ] `GET /health`が200で応答する（`ng`のcomponentがあれば[`monitoring.md`](monitoring.md) 7節に沿って切り分ける）
 - [ ] 主要APIエンドポイント（コマンド一覧・実行系）が想定どおり応答する
 - [ ] Google認証フロー（`/auth/redirect` → コールバック）が成功する
 - [ ] 休日判定・個別カレンダー上書きが想定どおり動作する
@@ -49,6 +50,7 @@ Issue #226でPHP 8.5への本番切り替えを行う際も、このチェック
 
 - [ ] `holidays:update`・`time:trigger`・`results:delete`を起動するOS側cron／systemd timer等が、デプロイ後も引き続き設定されている（本番の起動方法自体は未確認事項。[`current-operations.md`](current-operations.md) 5.5節）
 - [ ] `time:trigger`が直近で実行され、対象の時間トリガーが処理されていることをログまたは`exec_results`で確認した
+- [ ] `logs/scheduler-heartbeat.json`の`time:trigger`が直近で更新されている（[`monitoring.md`](monitoring.md) 3節・6節）
 - [ ] Schedulerの多重起動が発生していないことを確認した
 
 ## ログ確認

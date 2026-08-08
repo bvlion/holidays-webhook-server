@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Libs\ExternalHttpFailure;
 use App\Models\Command;
 use App\Models\SummarizeCommand;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Http\Request;
 use Psr\Http\Message\ResponseInterface;
@@ -79,8 +81,16 @@ class CommandExecController extends BaseApiController
             try {
                 $res = $client->request($command->method, $command->url, $options);
                 array_push($results, $this->saveResult($command->target_name, $res));
-            } catch (RequestException $e) {
-                array_push($results, $this->saveResult($command->target_name, $e->getResponse()));
+            } catch (GuzzleException $e) {
+                if (ExternalHttpFailure::hasResponse($e)) {
+                    /** @var RequestException $e */
+                    array_push($results, $this->saveResult($command->target_name, $e->getResponse()));
+
+                    continue;
+                }
+
+                ExternalHttpFailure::log('command_exec', $e, ['command_id' => $command->id]);
+                array_push($results, $this->saveNoResponseResult($command->target_name, $e));
             }
         }
 
@@ -95,5 +105,10 @@ class CommandExecController extends BaseApiController
             'response_header' => json_encode($res->getHeaders(), true),
             'response_body' => $res->getBody(),
         ];
+    }
+
+    private function saveNoResponseResult(string $name, GuzzleException $e)
+    {
+        return array_merge(['name' => $name], ExternalHttpFailure::noResponsePayload($e));
     }
 }

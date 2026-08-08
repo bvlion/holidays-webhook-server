@@ -2,15 +2,21 @@
 
 namespace App\Console\Commands;
 
+use App\Exceptions\HolidayFetchException;
+use App\Libs\ExternalHttpFailure;
+use App\Libs\SchedulerHeartbeat;
 use App\Models\ExecResult;
 use App\Models\OnetimeSkip;
 use App\Models\User;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Pool;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Psr\Http\Message\ResponseInterface;
+use Throwable;
 
 class TimeTrigger extends Command
 {
@@ -39,11 +45,30 @@ class TimeTrigger extends Command
     }
 
     /**
+     * scheduler heartbeat上でこのコマンドを識別する名前。
+     */
+    private const HEARTBEAT_TASK = 'time:trigger';
+
+    /**
      * Execute the console command.
      *
      * @return int
      */
     public function handle()
+    {
+        $heartbeat = app(SchedulerHeartbeat::class);
+
+        try {
+            $this->runTriggers();
+            $heartbeat->recordSuccess(self::HEARTBEAT_TASK);
+        } catch (Throwable $e) {
+            $heartbeat->recordFailure(self::HEARTBEAT_TASK);
+
+            throw $e;
+        }
+    }
+
+    private function runTriggers(): void
     {
         // 実行対象を取得
         $triggers = DB::select("
@@ -129,8 +154,18 @@ class TimeTrigger extends Command
                     continue;
                 }
 
-                // 祝日判定
-                $is_holiday = array_key_exists(date('Y-m-d'), app()->make('HolidayList')->getHolidays($trigger->country_code, date('Y')));
+                // 祝日判定。Google Calendar側の失敗はこのトリガーだけをスキップし、
+                // 他のトリガーの実行やscheduler自体の成功判定には影響させない。
+                try {
+                    $is_holiday = array_key_exists(date('Y-m-d'), app()->make('HolidayList')->getHolidays($trigger->country_code, date('Y')));
+                } catch (HolidayFetchException $e) {
+                    Log::warning('time_trigger.holiday_lookup_failed', [
+                        'trigger_id' => $trigger->t_id,
+                        'exception' => get_class($e),
+                    ]);
+
+                    continue;
+                }
 
                 // 個人カレンダーがあった場合はそちらを優先する
                 if ($trigger->user_holiday !== null) {
@@ -173,8 +208,16 @@ class TimeTrigger extends Command
                             $this->saveResult($trigger, $res);
                         },
                         // Rejected
-                        function (RequestException $e) use ($trigger) {
-                            $this->saveResult($trigger, $e->getResponse());
+                        function (GuzzleException $e) use ($trigger) {
+                            if (ExternalHttpFailure::hasResponse($e)) {
+                                /** @var RequestException $e */
+                                $this->saveResult($trigger, $e->getResponse());
+
+                                return;
+                            }
+
+                            ExternalHttpFailure::log('time_trigger', $e, ['trigger_id' => $trigger->t_id]);
+                            $this->saveNoResponseResult($trigger, $e);
                         }
                     );
 
@@ -186,6 +229,20 @@ class TimeTrigger extends Command
         $pool = new Pool($client, $requests());
         $promise = $pool->promise();
         $promise->wait();
+    }
+
+    private function saveNoResponseResult($trigger, GuzzleException $e)
+    {
+        $payload = ExternalHttpFailure::noResponsePayload($e);
+
+        ExecResult::create([
+            'command_id' => $trigger->c_id,
+            'trigger_id' => $trigger->t_id,
+            'exec_time' => $trigger->exec_time,
+            'response_code' => $payload['response_code'],
+            'response_header' => $payload['response_header'],
+            'response_body' => $payload['response_body'],
+        ]);
     }
 
     private function saveResult($trigger, ResponseInterface $res)
