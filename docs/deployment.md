@@ -186,7 +186,7 @@ git diff <直前deployのtag>..<今回deployするtag> -- docker/db/sql/
 
 **このIssueでは、この差分を解消するための本番DB ALTER、および `docker/db/sql/ssids.sql` の変更を行わない。** 理由は次のとおりである。
 
-1. `docker/db/sql/ssids.sql`は初期commit（2021-08-30、`7e34549046675d7eab3b1f926024444c5465845e`）の時点ですでに`ssid VARCHAR(1024) NOT NULL`でDEFAULTを持たない。その後のSSID関連commit（`196a922d90d92dd52b418c701e3413f8d95222d2`）もコメントを「URL」から「SSID」へ変更しただけで、DEFAULTは変更していない。したがって、この差分は今回までの保守作業で発生したschema regressionではなく、本番運用の初期から存在する差分である。
+1. `docker/db/sql/ssids.sql`は初期commit（2021-08-30、`7e34549046675d7eab3b1f926024444c5465845e`）の時点ですでに`ssid VARCHAR(1024) NOT NULL`でDEFAULTを持たない。その後のSSID関連commit（`196a922d90d92dd52b418c701e3413f8d95222d2`）もコメントを「URL」から「SSID」へ変更しただけで、DEFAULTは変更していない。したがって、少なくともリポジトリ上では今回までの保守作業で発生したschema regressionではない。本番DBにいつ`DEFAULT ''`が設定されたかは確認できていない。
 2. 現在のアプリケーションではSSID機能が完結していない。[`current-architecture.md`](current-architecture.md)のとおり、SSID関連テーブルは存在するが、SSID自体・SSID状態のモデル、SSIDを受け取るAPI、SSIDを使った実行処理がなく、`src/routes/api.php`にもSSID関連ルートはない。したがって、現在の本番利用経路ではこのDEFAULT差異による挙動差は発生しない。
 3. [`AGENTS.md`](../AGENTS.md)の方針により、対象Issueで必要性のないschema変更を先回りして行わない。
 
