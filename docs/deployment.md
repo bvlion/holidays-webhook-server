@@ -153,32 +153,48 @@ git diff <直前deployのtag>..<今回deployするtag> -- docker/db/sql/
 
 ## 8. DBバックアップ／復元
 
-### 8.1 リポジトリから確定できないこと（推測で埋めない）
+### 8.1 運用者による本番確認結果（2026-08-08）
 
-次の事項は、このリポジトリの内容からは確定できない。**未確認のまま断定しない。** 特に、本番DBがローカルと同じMySQL Server 5.7.35であるとは断定しない（[`current-operations.md`](current-operations.md) 5.4節も参照）。
+運用者がXServer本番環境上で次を確認した。接続先ホスト名・DB名・ユーザー名・パスワード等の実値は、この文書を含むリポジトリには記載しない。
 
-- 本番DBの製品・バージョン
-- 本番DBへの接続方法（ホスト、ポート、認証方式、TLS要否）
-- XServer上で利用可能なbackup／restore手段（管理画面のDB機能、`mysqldump`相当のCLIが使えるか、実行できるSSHユーザー権限等）
-- 本番の実スキーマ（`docker/db/sql/`との差分の有無を含む）
-- 本番DBのバックアップ取得・復元が過去に実施された実績
+- **製品・バージョン**: 本番DBはMySQL 5.7.16である。
+- **管理アクセス**: XServerのphpMyAdminから対象DB・テーブルを参照できる。また、SSHトンネル経由でSequel Aceから本番MySQLへ接続できる。
+- **バックアップ取得**: XServerのサーバーパネルから、対象DBの手動バックアップを取得できる。取得形式は非圧縮SQLとgz形式のいずれかを選択できる。
+- **復元経路（2通り）**:
+  1. XServerサーバーパネル: XServer側の自動バックアップから復元する操作がある。サーバーパネル上のこの機能は、手動でダウンロードしたSQLファイルを指定して復元する方式ではない。
+  2. Sequel Ace: SSHトンネル経由で本番DBへ接続した状態で `File → Import...` が利用できる。したがって、手動取得したSQLについては、この経路で復元できる。gzファイルをSequel Aceへ直接Importできるかどうかは確認していないため、可否を断定しない。
+- **実スキーマ**: 運用者がSequel Aceから、データを含めず構造のみで全テーブルをSQL Exportし、最新mainの`docker/db/sql/*.sql`と比較した。本番には `calenders`・`commands`・`exec_results`・`groups`・`onetime_skips`・`ssid_states`・`ssid_triggers`・`ssids`・`summarize_commands`・`time_triggers`・`users` の11テーブルが存在し、テーブル名は最新mainの11定義と一致する。カラム、型、NULL可否、主要default、PRIMARY KEY、UNIQUE制約を比較した結果、意味のある差分は8.2節の1点のみであり、`INT`と`INT(11)`の表記、`DEFAULT NULL`の明記有無、数値defaultのクォート有無、`ENGINE`/`CHARSET`の明記等のSQL dump上の表記差は実質的なスキーマ差として扱っていない。
 
-これらは「人間による本番確認項目」であり、AIエージェントが本番へ接続して確認することはしない。
+**重要**: 本番DBへの実際のrestoreは破壊的操作であるため、このIssueでは実施していない。「実際にrestoreして成功を確認した」という実績はない。確認できたのは、バックアップ取得経路が利用可能であること、復元操作・復元経路が存在すること、本番障害時に利用できる手段を特定できたことの範囲である。
 
-### 8.2 人間による本番確認項目（deploy運用を始める前に一度確認する）
+以下は今回未確認のままであり、推測で埋めない。
 
-- [ ] 本番DBの製品・バージョンをXServer管理画面または運用者の記録から確認する
-- [ ] 本番DBへの接続方法（XServer管理画面のDB機能／本番アプリサーバーからのローカル接続／その他）を確認する
-- [ ] XServer上で利用可能なbackup手段（管理画面のエクスポート機能、SSH経由の`mysqldump`相当コマンド等）を確認する
-- [ ] 上記backup手段でのrestore手順（同一手段で戻せるか、別手段が必要か）を確認する
-- [ ] 本番の実スキーマが`docker/db/sql/`の定義と一致しているか、差分があれば何かを確認する
-- [ ] 確認した内容を、秘密情報（接続文字列の実値、パスワード等）を含めない形で運用者内の記録に残す
+- 過去にDB restoreを実施した実績
+- gzファイルをSequel Aceへ直接Importできるか
+- 本番DBのTLS詳細
+- 本番DBのSQL mode
+- レプリケーション構成
 
-**このIssueの時点では、上記いずれも「実行して確認した」わけではない。未確認は未確認のまま記載する。**
+### 8.2 既知のスキーマ差分: `ssids.ssid`のDEFAULT
+
+本番の実スキーマ確認（8.1節）で、`ssids`テーブルの`ssid`カラムに次の差分が見つかった。
+
+| | 定義 |
+| --- | --- |
+| 本番 | `ssid VARCHAR(1024) NOT NULL DEFAULT ''` |
+| 最新mainの[`docker/db/sql/ssids.sql`](../docker/db/sql/ssids.sql) | `ssid VARCHAR(1024) NOT NULL`（DEFAULTなし） |
+
+**このIssueでは、この差分を解消するための本番DB ALTER、および `docker/db/sql/ssids.sql` の変更を行わない。** 理由は次のとおりである。
+
+1. `docker/db/sql/ssids.sql`は初期commit（2021-08-30、`7e34549046675d7eab3b1f926024444c5465845e`）の時点ですでに`ssid VARCHAR(1024) NOT NULL`でDEFAULTを持たない。その後のSSID関連commit（`196a922d90d92dd52b418c701e3413f8d95222d2`）もコメントを「URL」から「SSID」へ変更しただけで、DEFAULTは変更していない。したがって、少なくともリポジトリ上では今回までの保守作業で発生したschema regressionではない。本番DBにいつ`DEFAULT ''`が設定されたかは確認できていない。
+2. 現在のアプリケーションではSSID機能が完結していない。[`current-architecture.md`](current-architecture.md)のとおり、SSID関連テーブルは存在するが、SSID自体・SSID状態のモデル、SSIDを受け取るAPI、SSIDを使った実行処理がなく、`src/routes/api.php`にもSSID関連ルートはない。したがって、現在の本番利用経路ではこのDEFAULT差異による挙動差は発生しない。
+3. [`AGENTS.md`](../AGENTS.md)の方針により、対象Issueで必要性のないschema変更を先回りして行わない。
+
+将来SSID機能を再実装するIssueで、`DEFAULT ''`を正とするか、DEFAULTなしを正とするかを改めて判断する。
 
 ### 8.3 バックアップ・復元コマンドを記載する場合の注意
 
-将来、8.2節の確認が完了し、本番向けのbackup/restore手順をコマンド例つきで文書化する場合は、次を守る。
+将来、本番向けのbackup/restore手順をコマンド例つきで文書化する場合は、次を守る。
 
 - 接続情報（ホスト名、ユーザー名、パスワード）をコマンドライン引数へ直接書かない。パスワードは`MYSQL_PWD`環境変数、`--defaults-extra-file`で指定する設定ファイル（権限600、Git管理外）、またはXServer管理画面の対話プロンプトなど、シェル履歴・プロセス一覧（`ps`）に残らない方法を使う。
 - 例（実値はプレースホルダーのままとし、本文書へ実値を書かない）:
@@ -188,7 +204,6 @@ git diff <直前deployのtag>..<今回deployするtag> -- docker/db/sql/
   mysqldump --defaults-extra-file=/path/to/backup-only.cnf --single-transaction <DB名> > backup.sql
   ```
 
-- 上記はMySQL系DBを前提にした一般的な例であり、**本番DBがMySQL系であることを含めて8.1節の事項は未確認である。** 実際に使用する製品・手段が確認でき次第、このコマンド例を実物に置き換える。
 - バックアップファイル自体にも本番データと同じアクセス制御を適用する（[`secrets-management.md`](secrets-management.md) 3.3節）。
 
 ## 9. 関連ドキュメント
