@@ -55,7 +55,7 @@ AIエージェントは、本番XServerへのSSH接続、本番DBへの直接接
 配備先の既存ファイルを削除してから新しいファイルを転送するため、rsyncが途中で失敗すると、削除済みで新ファイルも一部しかない状態がサーバーに残り得る。この方式自体は本Issueの範囲では変更しない（`v*` トリガー・SSH+rsync方式そのものを作り直すことはIssue #224のスコープ外）。安全に運用するための最小限の対策は次の2点とする。
 
 - deploy前に、後述の「5. アプリケーションファイルのバックアップ」を必ず行う。
-- deploy失敗（delete/rsyncステップの失敗を含む）が確実に人間へ通知されるようにする。2.3節のSlack通知の`if: always()`修正はこのための最小修正である。
+- deploy失敗（delete/rsyncステップの失敗を含む）が確実に人間へ通知されるようにする。3.1節のSlack通知の`if: always()`修正はこのための最小修正である。
 
 ## 3. GitHub Actions deploy workflowについて確認した安全性
 
@@ -72,13 +72,13 @@ AIエージェントは、本番XServerへのSSH接続、本番DBへの直接接
 - `v*` タグによる起動条件は変更していない。
 - 本番PHPは変更していない。
 - 新しいSecretは追加していない。
-- Actionsのバージョン更新（`actions/checkout@v2`・`actions/cache@v1` 等）は目的としない。これらはDependabot運用（[`dependency-updates.md`](dependency-updates.md)）に委ねる。
+- Actionsのバージョン更新は目的としない。`actions/checkout`・`actions/cache`等のバージョンはDependabot運用（[`dependency-updates.md`](dependency-updates.md)）に委ね、本文書では特定のバージョン番号を前提にしない。
 - 実際のdeployは起動していない。
-- `actionlint` で静的検証済み。既存の `actions/checkout@v2`・`actions/cache@v1` の版指摘、および `composer install` ステップの `shellcheck SC2086` 指摘は本修正の前後で変わらない既存の指摘であり、今回の変更で新たに追加された指摘はない。
+- `actionlint` で静的検証済み。本文書の更新時点（2026-08-08、`agent/issue-224-deployment-docs`を最新mainへ追従させた状態）では、`composer install` ステップの `shellcheck SC2086` 指摘（既存の挙動）のみが残っており、`actions/checkout`・`actions/cache`のバージョンに関する指摘はない。今回の`if: always()`追加によって新たに増えた指摘はない。Dependabotが今後Actionsのバージョンを更新した場合、この結果は再度変わり得るため、実施時点の最新mainを基準に読み替えること。
 
 ### 3.2 その他確認したが変更しなかった点
 
-- `actions/checkout@v2`・`actions/cache@v1` が古い: Dependabot運用に委ねる方針のため、本Issueでは更新しない。
+- Actionsのバージョンが古い場合: Dependabot運用に委ねる方針のため、本Issueでは更新しない（バージョンは実施時点のmainの状態に従う）。
 - `composer install` ステップの `$PWD` 未クォート（shellcheck指摘）: 既存の挙動であり、動作を変える修正は本Issueのスコープ外と判断し変更しない。
 - 削除→rsync方式そのもの、atomicな切り替えがないこと: ワークフロー全体の作り直しが必要でありIssue #224の範囲を超えるため、2.2節の運用対策と[`rollback.md`](rollback.md)で対応する。
 
@@ -123,7 +123,7 @@ AIエージェントは、本番XServerへのSSH接続、本番DBへの直接接
 2. `php artisan config:clear` で既存のconfig cacheを破棄する（配備直後に古いcodeパスを参照した設定キャッシュが残っている可能性を消す）。
 3. `php artisan route:clear`・`php artisan view:clear` で古いルート・ビューキャッシュを破棄する。
 4. `php artisan cache:clear` でアプリケーションキャッシュ（`.env`の`CACHE_DRIVER`に依存）を破棄する。祝日キャッシュ（`logs/holidays.json`）はLaravelのcacheとは別物であり、この操作では消えない。
-5. 必要な場合のみ `php artisan config:cache`・`php artisan route:cache`・`php artisan view:cache` で再生成する。**config:cacheを先にconfig:clearせず実行すると、削除前の設定が残ったまま固定される恐れがあるため、必ずclear→cacheの順にする。**
+5. 必要な場合のみ `php artisan config:cache`・`php artisan route:cache`・`php artisan view:cache` で再生成する。Laravel 13の`config:cache`自体、内部で最初に既存のconfig cacheをクリアしてから再生成するため、`config:cache`単体でも古い設定が残ったまま固定されることはない。手順として2番目に明示的な`config:clear`を置くのは、デプロイ手順を分かりやすくし、再生成前に一旦未キャッシュ状態へ戻してから進める運用上の整理のためである。
 6. 最後に、Composerのオートローダーが新しいコードに追随しているか確認する（`composer install --no-dev`を配備側で実行済みであれば、オートローダーはその時点で更新されている）。
 
 現在のdeploy workflowはこれらのartisanコマンドを一切実行しない（2.1節）。本番で明示的に再構築したい場合は、上記手順を人間がSSH経由で実施する。
