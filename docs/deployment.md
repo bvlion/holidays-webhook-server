@@ -98,7 +98,7 @@ Issue #224で、当時のdeploy workflowの安全性を確認した結果、**�
 1. **対象commit / tagの確認**: デプロイしたいcommitがどれか特定し、そのcommitに対して意図したtag名（`v*`）を付与する。既存tagと衝突していないか確認する。
 2. **main CI成功確認**: 対象commitに対応する `.github/workflows/test.yaml`（`make check`）がGitHub Actions上で成功していることを確認する。
 3. **PHP / Laravel / Composer platform要件の確認**: `src/composer.json` の `require.php`（現在 `^8.3`）・`laravel/framework`（現在 `^13.0`）を確認する。
-4. **本番PHPが対象リリースを実行可能か**: 本番PHPの実バージョンを人間が確認し、3で確認したComposer platform要件を満たすか判定する。**現時点（Issue #226完了前）は本番PHPが8.2.30であり `^8.3` を満たさないため、mainの現在のリリースを本番へデプロイしてはならない。** この判定を飛ばして安易にdeployしないこと。
+4. **本番PHPが対象リリースを実行可能か**: 本番PHPの実バージョンを人間が確認し、3で確認したComposer platform要件を満たすか判定する。**現時点（Issue #226完了前）は本番PHPが8.2.30であり `^8.3` を満たさないため、mainの現在のリリースを本番へデプロイしてはならない。** この判定を飛ばして安易にdeployしないこと。**唯一の例外はIssue #226のPHP 8.5初回切り替え作業であり、[`php85-production-switch.md`](php85-production-switch.md) 8節に定める条件をすべて満たす場合に限り、本番PHPが8.2.30のままtag pushを開始することを認める。** それ以外の通常のdeployにこの例外は適用しない。Issue #226完了後（本番PHPが8.5系になった後）は、この例外自体が不要になり、通常どおり本判定に従う。
 5. **アプリケーションファイルのバックアップ**: 5節を参照。
 6. **DBバックアップ**: 8節を参照。
 7. **`.env`を変更・削除しないこと**: deployは`.env`を削除・上書きしない設計（2節参照）だが、人間が手動でSSH操作をする場合も`.env`を書き換えない。変更が必要な場合は本Issueの手順とは別に、変更内容・理由・実施者を記録する。
@@ -155,7 +155,7 @@ Issue #224で、当時のdeploy workflowの安全性を確認した結果、**�
 git diff <直前deployのtag>..<今回deployするtag> -- docker/db/sql/
 ```
 
-差分が空であれば、このリリースのDB適用は「適用なし」と判定できる。この場合、8節のDBバックアップは通常運用のバックアップサイクルに従えばよく、schema変更に伴う追加のバックアップは不要である。
+差分が空であれば、このリリースのDB適用は「適用なし」と判定できる。この場合、8節のDBバックアップは通常運用のバックアップサイクルに従えばよく、schema変更に伴う追加のバックアップは不要である。**ただしIssue #226のPHP 8.5切り替えは、この判定に関わらずDBバックアップを必須とする（[`php85-production-switch.md`](php85-production-switch.md) 6節）。**
 
 ### 7.2 schema変更がある場合
 

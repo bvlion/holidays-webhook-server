@@ -4,14 +4,14 @@
 
 このチェックリストは実施者（人間）が使うものであり、AIエージェントが本番操作・tag作成・deploy実行を代行することはない（役割分担は[`deployment.md`](deployment.md) 1節）。
 
-Issue #226でPHP 8.5への本番切り替えを行う際も、このチェックリストの流れ（deploy前〜作業記録）はそのまま使える想定である。**PHP 8.5切り替え固有の手順（XServer PHP切り替え、Cron/Scheduler停止・再開、PHP拡張確認等）は [`php85-production-switch.md`](php85-production-switch.md) にまとめており、本チェックリストには含めない。**
+Issue #226でPHP 8.5への本番切り替えを行う際も、このチェックリストの流れ（deploy前〜作業記録）はそのまま使える想定である。**PHP 8.5切り替え固有の手順（XServer PHP切り替え、Cron/Scheduler停止・再開、PHP拡張確認等）は [`php85-production-switch.md`](php85-production-switch.md) にまとめており、本チェックリストには含めない。** ただし、下記「deploy前」のPHP要件判定と「backup完了」のDBバックアップ要否判定の2項目は、Issue #226のPHP 8.5初回切り替え作業に限り[`php85-production-switch.md`](php85-production-switch.md)側の条件が優先される（各項目の注記を参照）。
 
 ## deploy前
 
 - [ ] 対象commit / tagを特定した（[`deployment.md`](deployment.md) 4-1）
 - [ ] 対象commitに対応する`test.yaml`（`make check`）がGitHub Actions上で成功している（4-2）
 - [ ] `src/composer.json`のPHP / Laravel / Composer要件を確認した（4-3）
-- [ ] 本番PHPの実バージョンを確認し、上記要件を満たすことを確認した（4-4）。**満たさない場合はここで中止する。**
+- [ ] 本番PHPの実バージョンを確認し、上記要件を満たすことを確認した（4-4）。**満たさない場合はここで中止する。** Issue #226のPHP 8.5初回切り替え作業に限り、[`php85-production-switch.md`](php85-production-switch.md) 8節の例外条件をすべて満たす場合だけ、本番PHPが要件を満たさない状態でのtag pushが許容される。
 - [ ] 必要なPHP拡張が本番に入っていることを確認した（4-8）
 - [ ] `docker/db/sql/`の差分有無を確認し、schema変更の有無を判定した（4-9、[`deployment.md`](deployment.md) 7節）
 - [ ] schema変更がある場合、対象Issue/PRに適用手順・ロールバック手順が明示されている（[`deployment.md`](deployment.md) 7.2節）
@@ -23,7 +23,7 @@ Issue #226でPHP 8.5への本番切り替えを行う際も、このチェック
 - [ ] 本番アプリケーションファイルの控えを取得した（[`deployment.md`](deployment.md) 5節）
 - [ ] 控えに対応するtag名・commit SHAを記録した
 - [ ] schema変更がある場合、DBバックアップを取得した（[`deployment.md`](deployment.md) 7.2節・8節）
-- [ ] schema変更がない場合、通常運用のDBバックアップサイクルで問題ないことを確認した（[`deployment.md`](deployment.md) 7.1節）
+- [ ] schema変更がない場合、通常運用のDBバックアップサイクルで問題ないことを確認した（[`deployment.md`](deployment.md) 7.1節）。**ただしIssue #226のPHP 8.5切り替え作業は、schema変更の有無にかかわらずDBバックアップを取得する**（[`php85-production-switch.md`](php85-production-switch.md) 6節。上記2項目によるDBバックアップ要否判定は通常運用時のみ適用し、Issue #226では適用しない）
 
 ## deploy
 

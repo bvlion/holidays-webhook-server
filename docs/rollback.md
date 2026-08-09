@@ -71,7 +71,7 @@ DB restoreを検討するのは、次のいずれかに該当する場合に限�
 
 ## 7. 関連ドキュメント
 
-- PHP 8.5本番切り替え固有のロールバック手順（Issue #226、本文書4節を拡張したもの）: [`php85-production-switch.md`](php85-production-switch.md) 12節
+- PHP 8.5本番切り替え固有のロールバック手順（Issue #226、本文書4節を拡張したもの）: [`php85-production-switch.md`](php85-production-switch.md) 13節
 - デプロイ手順・deploy前チェック・バックアップ方針: [`deployment.md`](deployment.md)
 - 作業チェックリスト: [`deployment-checklist.md`](deployment-checklist.md)
 - 運用・本番情報の詳細と未確認事項: [`current-operations.md`](current-operations.md)
