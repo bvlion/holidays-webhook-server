@@ -27,13 +27,13 @@ AIエージェントは、本番XServerへのSSH接続、本番DBへの直接接
 
 1. リポジトリをcheckoutする。
 2. `secrets.ID_RSA`・`secrets.KNOWN_HOSTS` からSSH鍵と既知ホストを配置する。
-3. `src/composer.lock` のハッシュで `src/vendor` のキャッシュを復元する。
-4. キャッシュがヒットしない場合だけ、Composerコンテナで `composer install`（dev依存を含む既定の `install`。`--no-dev` は指定していない）を実行する。
+3. `docker/web/Dockerfile` の既定イメージ（PHP 8.5.9 + Composer 2.8.12。Issue #220で `.github/workflows/test.yaml`（`make check`）の標準に昇格済みの環境と同一）をbuildする。
+4. そのイメージのコンテナ内で、cacheの有無に関わらず必ず `composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader` を実行し、本番用vendorを生成する（Issue #226。production vendor cacheは持たない。6.1節）。
 5. SSHで配備先へ接続し、`cd ${{ secrets.SSH_DIR }} && ls | grep -v -E 'logs' | xargs rm -rf` を実行する。`ls`（`-a`なし）はドットファイルを列挙しないため、`.env` はこの削除対象に現れない。`logs` はパターンで明示的に除外される。それ以外の通常表示されるファイル・ディレクトリはすべて削除される。
 6. `rsync -av` で `src/` の内容を配備先へ転送する。`--exclude` は `logs`・`phpunit.xml`・`.env`・`tests` の4つ。
 7. `8398a7/action-slack@v3` でSlackへ結果を通知する。
 
-この文書整備の一環として、Slack通知ステップに `if: always()` を追加した（3.1節参照）。それ以外の起動条件・Secrets構成・Actionsバージョンは変更していない。
+Slack通知ステップの `if: always()`（Issue #224で追加、3.1節参照）と、起動条件・Secrets構成・Actionsバージョンは変更していない。
 
 ### 2.1 現在のdeployに含まれないもの
 
@@ -59,7 +59,7 @@ AIエージェントは、本番XServerへのSSH接続、本番DBへの直接接
 
 ## 3. GitHub Actions deploy workflowについて確認した安全性
 
-このIssueで、現在のdeploy workflowの安全性を確認した結果、**文書化だけでは回避できない問題を1件確認し、最小修正した。**
+Issue #224で、当時のdeploy workflowの安全性を確認した結果、**文書化だけでは回避できない問題を1件確認し、最小修正した（3.1節）。** その後Issue #226で、本番向けComposer install環境の固定化・`--no-dev`化・production vendor cacheの廃止を行った（6.1節、3.3節）。
 
 ### 3.1 Slack通知が失敗時に送られない問題
 
@@ -74,13 +74,22 @@ AIエージェントは、本番XServerへのSSH接続、本番DBへの直接接
 - 新しいSecretは追加していない。
 - Actionsのバージョン更新は目的としない。`actions/checkout`・`actions/cache`等のバージョンはDependabot運用（[`dependency-updates.md`](dependency-updates.md)）に委ね、本文書では特定のバージョン番号を前提にしない。
 - 実際のdeployは起動していない。
-- `actionlint` で静的検証済み。本文書の更新時点（2026-08-08、`agent/issue-224-deployment-docs`を最新mainへ追従させた状態）では、`composer install` ステップの `shellcheck SC2086` 指摘（既存の挙動）のみが残っており、`actions/checkout`・`actions/cache`のバージョンに関する指摘はない。今回の`if: always()`追加によって新たに増えた指摘はない。Dependabotが今後Actionsのバージョンを更新した場合、この結果は再度変わり得るため、実施時点の最新mainを基準に読み替えること。
+- `actionlint` で静的検証済み。Issue #224時点（2026-08-08、`agent/issue-224-deployment-docs`を最新mainへ追従させた状態）では、`composer install` ステップの `shellcheck SC2086`（`$PWD` 未クォート）指摘が残っていたが、Issue #226でComposer installステップ自体を書き換えた際に変数をクォートしたため、この指摘は解消した（3.3節）。`actions/checkout`・`actions/cache`のバージョンに関する指摘はない。Dependabotが今後Actionsのバージョンを更新した場合、この結果は再度変わり得るため、実施時点の最新mainを基準に読み替えること。
 
-### 3.2 その他確認したが変更しなかった点
+### 3.2 その他確認したが変更しなかった点（Issue #224時点）
 
-- Actionsのバージョンが古い場合: Dependabot運用に委ねる方針のため、本Issueでは更新しない（バージョンは実施時点のmainの状態に従う）。
-- `composer install` ステップの `$PWD` 未クォート（shellcheck指摘）: 既存の挙動であり、動作を変える修正は本Issueのスコープ外と判断し変更しない。
+- Actionsのバージョンが古い場合: Dependabot運用に委ねる方針のため、Issue #224では更新しない（バージョンは実施時点のmainの状態に従う）。
 - 削除→rsync方式そのもの、atomicな切り替えがないこと: ワークフロー全体の作り直しが必要でありIssue #224の範囲を超えるため、2.2節の運用対策と[`rollback.md`](rollback.md)で対応する。
+
+### 3.3 Issue #226での変更: Composer install環境の固定化・`--no-dev`化・cache廃止
+
+6.1節のとおり、Issue #226で次を変更した。
+
+- Composer install手順を「`composer`固定外イメージでのdev依存込みinstall」から、「`docker/web/Dockerfile`の既定イメージ（PHP 8.5.9 + Composer 2.8.12、CIと同一）での`--no-dev`install」へ置き換えた。
+- production用vendor cache（`actions/cache@v6`ステップ）を廃止し、cacheの有無に関わらず必ずComposer installを実行するようにした。
+- 書き換えに伴い、3.1節で挙げていた`$PWD`未クォートのshellcheck指摘は解消した。
+- `v*` タグによる起動条件、SSH鍵配置・削除・rsync・Slack通知の各ステップの処理内容は変更していない。
+- 削除→rsync方式そのもの、atomicな切り替えがないことは、Issue #226でも変更しない（引き続き2.2節の運用対策と[`rollback.md`](rollback.md)で対応する）。
 
 ## 4. deploy前チェック（人間が実施）
 
@@ -111,7 +120,13 @@ AIエージェントは、本番XServerへのSSH接続、本番DBへの直接接
 
 本番向けにインストールする依存関係は、dev依存（`require-dev`）を含めない前提とする。`src/composer.json` の `composer:prod-check`（`composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --dry-run`）で、dev依存を除いた依存解決がdry-runで通ることを`make check`が既に検証している。
 
-**現在の`.github/workflows/deploy.yaml`は`--no-dev`を指定しない`composer install`を実行しており、dev依存を含めてインストールしている。** これは本文書が定義する「今後安全に実施する手順」とは異なる、現状の実装の挙動である（2節参照）。本Issueでは、本番PHPがLaravel 13を実行できない制約（4節）があるため、実際に本番向けComposer installを実行して確認することはしない。この差分の解消（deploy workflowを`--no-dev`へ寄せるか、別の理由で現状維持とするか）は、Issue #226で実際にLaravel 13を本番へ載せる際に判断する。
+**Issue #226で、`.github/workflows/deploy.yaml`のComposer install手順を次のように変更した。**
+
+- 依存関係を生成する環境を、`docker/web/Dockerfile`の既定イメージ（PHP 8.5.9 + Composer 2.8.12）へ固定した。`.github/workflows/test.yaml`（`make check`）が使う環境と同一であり、CIで検証済みの環境で本番用vendorを生成する。旧手順が使っていた`composer`固定外イメージ（floating tag）は使用しない。
+- `composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader` を実行し、dev依存を含めない。
+- production用のvendor cacheは廃止した。`.github/workflows/test.yaml`のvendor cache（dev依存込みで生成される）とは完全に独立しており、cache hitによってComposer installがskipされ、dev依存込みvendorが本番へ配備される、という従来の問題（2節）は構造的に発生しない。deployは`v*`タグpush時のみ起動する低頻度の処理であり、cacheによる高速化の価値より、cacheの有無に関わらず常に本番用installを実行できる確実性を優先した。
+
+この変更は、本番PHPをPHP 8.5系へ切り替える[`php85-production-switch.md`](php85-production-switch.md)（Issue #226）のリポジトリ側の準備として実施した。実際の本番向けComposer installの動作確認（`--no-dev`で成功し、dev依存が含まれず、`composer check-platform-reqs --no-dev`が通ること）は、本番秘密情報を使わない一時環境で確認済みである。実際の本番デプロイでの動作確認は、本Issueの範囲では行っていない。
 
 ### 6.2 Laravel cacheの扱い
 
@@ -208,6 +223,7 @@ git diff <直前deployのtag>..<今回deployするtag> -- docker/db/sql/
 
 ## 9. 関連ドキュメント
 
+- PHP 8.5本番切り替えrunbook（Issue #226）: [`php85-production-switch.md`](php85-production-switch.md)
 - ロールバック条件・手順: [`rollback.md`](rollback.md)
 - deploy作業時のチェックリスト: [`deployment-checklist.md`](deployment-checklist.md)
 - 運用・本番情報の詳細と未確認事項: [`current-operations.md`](current-operations.md)

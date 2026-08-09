@@ -4,7 +4,7 @@
 
 このチェックリストは実施者（人間）が使うものであり、AIエージェントが本番操作・tag作成・deploy実行を代行することはない（役割分担は[`deployment.md`](deployment.md) 1節）。
 
-Issue #226でPHP 8.5への本番切り替えを行う際も、このチェックリストの流れ（deploy前〜作業記録）はそのまま使える想定である。**PHP 8.5切り替えの具体的な手順そのものはIssue #226の範囲であり、本チェックリストには含めない。**
+Issue #226でPHP 8.5への本番切り替えを行う際も、このチェックリストの流れ（deploy前〜作業記録）はそのまま使える想定である。**PHP 8.5切り替え固有の手順（XServer PHP切り替え、Cron/Scheduler停止・再開、PHP拡張確認等）は [`php85-production-switch.md`](php85-production-switch.md) にまとめており、本チェックリストには含めない。**
 
 ## deploy前
 

@@ -19,21 +19,31 @@ jobs:
           echo ${{ secrets.KNOWN_HOSTS }} > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
 
-      - name: cache vendor
-        id: cache
-        uses: actions/cache@v6
-        with:
-          path: ./src/vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
+      # test.yaml（`make check`）と同じ docker/web/Dockerfile の既定イメージ
+      # （PHP 8.5.9 + Composer 2.8.12、Issue #220でCIの標準に昇格済み）を
+      # ビルドし、依存関係を生成する環境をCIで検証済みの環境へ揃える。
+      # 旧手順の `composer` 固定外イメージ（floating tag）は使用しない。
+      - name: build production PHP/Composer image
+        run: docker build --pull --tag hw-deploy-php ./docker/web
 
-      - name: composer install
-        if: steps.cache.outputs.cache-hit != 'true'
+      # 本番用vendorは常に --no-dev で、cacheの有無に関わらずこのステップで
+      # 生成する。test.yaml の vendor cache（dev依存込み）とは完全に独立して
+      # おり、production用cache自体を持たない（Issue #226）。
+      #
+      # 理由: deployは `v*` タグpush時のみ起動する低頻度の処理であり、
+      # cacheによる高速化の価値より、本番へdev依存込みvendorが混入する
+      # リスク（cache hitでinstall自体をskipしてしまう既存の問題）を
+      # 完全に排除できることを優先した。cache自体を持たなければ、
+      # 「cache hit時にskipしてしまう」という失敗モードが構造的に発生しない。
+      - name: composer install (production, no-dev)
         run: |
-          cd src
-          docker run --rm --interactive --volume $PWD:/app composer install
-          cd ..
+          docker run --rm \
+            --volume "$PWD/src:/var/www/html" \
+            --workdir /var/www/html \
+            --user "$(id -u):$(id -g)" \
+            --env COMPOSER_HOME=/tmp/composer \
+            hw-deploy-php \
+            composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 
       - name: delete server files
         run: |
