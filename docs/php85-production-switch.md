@@ -35,14 +35,12 @@ AIエージェントは、上記のいずれも実施しない。本文書はAI�
 
 ## 3. XServer PHP 8.5の仕様（運用時に実環境で確認すること）
 
-本文書作成時点でのXServer公式仕様に基づく前提は次のとおりである。**この前提は運用時に人間が実環境で再確認すること。**
+本文書作成時点でのXServer公式マニュアル（「プログラム言語・コマンドパス」「FastCGIについて」「PHPのバージョンについて」各ページ）に基づく前提は次のとおりである。**この前提は運用時に人間が実環境で再確認すること。**
 
-- **Web側**: XServerサーバーパネルの「PHP Ver.切替」で、ドメイン単位にPHP 8.5.xへ変更する。
+- **Web側の切り替え**: XServerサーバーパネルの「PHP Ver.切替」で、ドメイン単位にPHP 8.5.xへ変更する。
+- **Web側の実行方式**: XServer公式マニュアルには「いずれのバージョンもFastCGIとキャッシュモジュール（APC/OPcache）が標準で有効」と明記されている。**PHP 8.5もFastCGIが標準・常時有効であり、ドメインごとにCGI方式かFastCGI方式かを選択する仕組みではない。**
 - **CLI**: PHP 8.5 CLIの公式コマンドパスは `/usr/bin/php8.5` である。
-- **Web用CGI**: `/usr/bin/php8.5-cgi`
-- **Web用FastCGI**: `/usr/bin/php-fcgi8.5`
-
-対象ドメインが実際にCGI・FastCGIのどちらで動作しているかはXServerの契約・設定によって異なるため、本文書ではどちらか一方に決め打ちしない。**人間が対象ドメインの実行方式を確認し、対応するコマンドで4節の拡張確認を行う。**
+- **Web用コマンドパス**: XServer公式の「プログラム言語・コマンドパス」一覧では、Web実行用（「PHP 8.5.x (CGI)」区分）のコマンドパスとして `/usr/bin/php8.5-cgi` または `/usr/bin/php-fcgi8.5` の2種類が案内されている。これは「ドメインがCGI方式かFastCGI方式かを選ぶ」という意味ではなく、常時有効なFastCGI経由のWeb実行環境を指すコマンドパスが2種類案内されている、という位置づけである。**どちらのパスが実サーバーで実際に有効かは、サーバーパネルの「コマンドパス一覧」で人間が確認する。存在しないパスを推測で実行しない。**4節の拡張確認は、実際に有効な方のパスで行う。
 
 **patch version（8.5.5等）を本文書やIssue記録へ固定的に書かない。** 切り替え当日、本番SSH上で次を実行し、実際に有効なpatch versionを確認する。
 
@@ -56,7 +54,7 @@ AIエージェントは、上記のいずれも実施しない。本文書はAI�
 
 ## 4. PHP拡張の事前確認
 
-切り替え前に、PHP 8.5側で本番稼働に必要な拡張が、**CLIとWeb実行環境（CGI／FastCGI）の両方**で揃っているかを人間が確認する。**CLI（`/usr/bin/php8.5 -m`）の確認だけでは、Web実行環境のextension確認を済ませたことにはならない。** アプリケーションへの実リクエストはWeb実行環境（CGIまたはFastCGI）で処理されるため、CLIとphp.ini相当の設定が異なり得ることを踏まえ、Web側の確認を省略しない。
+切り替え前に、PHP 8.5側で本番稼働に必要な拡張が、**CLIとWeb実行環境（FastCGI）の両方**で揃っているかを人間が確認する。**CLI（`/usr/bin/php8.5 -m`）の確認だけでは、Web実行環境のextension確認を済ませたことにはならない。** アプリケーションへの実リクエストは、3節のとおり標準で常時有効なFastCGI経由のWeb実行環境で処理されるため、CLIとphp.ini相当の設定が異なり得ることを踏まえ、Web側の確認を省略しない。
 
 ### 4.1 必要な拡張の特定（根拠はリポジトリ側で用意済み）
 
@@ -77,18 +75,16 @@ XServer本番SSH上で、PHP 8.5 CLIのバージョンと読み込んでいる�
 
 4.1で特定した必要拡張と突き合わせ、不足がないか人間が確認する。
 
-### 4.3 XServer Web実行環境（CGI／FastCGI）側での確認
+### 4.3 XServer Web実行環境（FastCGI）側での確認
 
-対象ドメインが実際に使用しているWeb実行方式（CGIかFastCGIか）を、人間がXServer管理画面等で確認する。**存在しないコマンドを推測で実行しない。** 確認した方式に応じて、次のいずれかを実行する。
-
-CGIの場合:
+3節のとおり、XServerのWeb PHPは常時FastCGIで動作する。XServer公式の「プログラム言語・コマンドパス」一覧では、このWeb実行環境（「PHP 8.5.x (CGI)」区分）のコマンドパスとして `/usr/bin/php8.5-cgi` または `/usr/bin/php-fcgi8.5` の2種類が案内されている。**実サーバーでどちらのパスが実際に有効かを、人間がサーバーパネルの「コマンドパス一覧」で確認する。存在しないパスを推測で実行しない。** 確認できた方のパスで、次を実行する。
 
 ```shell
 /usr/bin/php8.5-cgi -v
 /usr/bin/php8.5-cgi -m
 ```
 
-FastCGIの場合:
+または（サーバーパネルで有効と確認できた方）
 
 ```shell
 /usr/bin/php-fcgi8.5 -v
@@ -101,7 +97,7 @@ FastCGIの場合:
 
 ### 4.4 不足時の対応
 
-**CLI・Web実行環境（CGI／FastCGI）のいずれかで必要な拡張が1つでも不足している場合は、切り替えを中止する。** 拡張追加の可否・方法（XServer側で追加可能か、追加不可でLaravel側の依存を調整する必要があるか）を確認してから、日を改めて再度この手順から実施する。
+**CLI・Web実行環境（FastCGI）のいずれかで必要な拡張が1つでも不足している場合は、切り替えを中止する。** 拡張追加の可否・方法（XServer側で追加可能か、追加不可でLaravel側の依存を調整する必要があるか）を確認してから、日を改めて再度この手順から実施する。
 
 ### 4.5 秘密情報・記録範囲の扱い
 
@@ -184,7 +180,9 @@ schema変更がない場合でも省略しない。PHP・フレームワーク�
 
 **Issue #226の初回切り替えに限り、次の条件をすべて満たす場合だけ、この状態でのtag pushを例外的に許容する。**
 
-- [ ] PHP 8.5 CLIおよびWeb実行環境（CGI／FastCGI）の両方で事前確認が完了している（3節・4節）
+**判定するタイミングは2段階に分かれる。** [`deployment-checklist.md`](deployment-checklist.md)「deploy前」を最初に通読する段階では、通常判定どおり「本番PHPがまだ8.2.30で要件を満たさない」ことだけを確認すればよく、下記8項目はまだすべて満たせていないことが通常である（Scheduler停止・両方のバックアップはこれより後の9節の手順で行うため）。**下記8項目すべての最終確認は、実際にtag pushを実行する直前（9節手順5の直前）に改めて行う。**
+
+- [ ] PHP 8.5 CLIおよびWeb実行環境（FastCGI）の両方で事前確認が完了している（3節・4節）
 - [ ] 本番稼働に必要なPHP拡張が、CLI・Web実行環境の両方で確認済みであり、不足がない（4節）
 - [ ] Scheduler停止方法（実際の起動機構とその停止・再開手段）が確認済みである（5.1節）
 - [ ] Schedulerが実際に停止済みである（5.3節、9節手順3）
@@ -287,10 +285,19 @@ PR #256のリポジトリ側変更により、`.github/workflows/deploy.yaml`は
 | 確認対象 | 方法 |
 | --- | --- |
 | `/` | 公開URLのルートが200で応答し、サーバー時刻・DB時刻を返すことを確認する（[`current-operations.md`](current-operations.md) 5.1節相当）。 |
-| `/health` | `GET /health`が200で応答することを確認する。`app`・`database`・`config`のcomponentを確認する（`scheduler`componentはSchedulerを意図的に停止中のため`ng`になり得るが、この段階では異常として扱わない）。`ng`のcomponentがあれば[`monitoring.md`](monitoring.md) 7節に沿って切り分ける。 |
+| `/health` | `GET /health`のレスポンスを次の基準で判定する（[`monitoring.md`](monitoring.md) 2節のとおり、`app`/`database`/`config`/`scheduler`の4componentすべてが`ok`ならHTTP 200、1つでも`ng`ならHTTP 503を返す仕様であり、この文書はその仕様自体を変更しない）。 |
 | DB接続（read-only） | `/health`の`database`component、または`/`のDB時刻表示により、読み取り専用のDB接続が成立していることを確認する。書き込みを伴う確認はここでは行わない。 |
 
-**このスモークテストのいずれかが失敗した場合、Schedulerを再開せず、13節のロールバック手順を検討する。** 問題があるままSchedulerを再開すると、定期実行が壊れた環境で走り続けるリスクがあるため、再開前に必ずこの最小限の確認を行う。
+`/health`の判定基準（Scheduler停止中）:
+
+- **合格**: 次のいずれかに該当する場合。
+  - HTTP 200で、`app`・`database`・`config`・`scheduler`のすべてが`ok`。
+  - HTTP 503だが、`app=ok`・`database=ok`・`config=ok`であり、`ng`なのは`scheduler`のみ。**Schedulerを意図的に停止しheartbeatの閾値（既定300秒、[`monitoring.md`](monitoring.md) 4節）を超えれば、正常な想定状態でも`scheduler`は`ng`になり、`/health`全体もHTTP 503になる。この場合の503は異常ではない。**
+- **不合格**: 次のいずれかに該当する場合。
+  - `app`・`database`・`config`のいずれかが`ng`。
+  - 上記2パターン以外のHTTPステータス、またはレスポンス形式自体が期待どおりでない。
+
+**`scheduler=ng`であることだけを理由に、この段階でロールバックを判断しない。** 一方、`app`・`database`・`config`のいずれかが`ng`の場合、または想定外のレスポンスの場合は不合格とし、Schedulerを再開せず、13節のロールバック手順を検討する。問題があるままSchedulerを再開すると、定期実行が壊れた環境で走り続けるリスクがあるため、再開前に必ずこの最小限の確認を行う。`ng`のcomponentがあれば[`monitoring.md`](monitoring.md) 7節に沿って切り分ける。
 
 ### 12.2 主要機能確認（Scheduler再開後、9節手順10・11）
 
@@ -303,6 +310,7 @@ PR #256のリポジトリ側変更により、`.github/workflows/deploy.yaml`は
 | 外部HTTP実行 | 12.3節を参照。 |
 | cron / scheduler | 5.1節で特定した起動機構が有効になっており、Laravel Schedulerが起動していることを確認する。 |
 | scheduler heartbeat | `logs/scheduler-heartbeat.json`の`time:trigger`が直近で更新されていることを確認する（[`monitoring.md`](monitoring.md) 3節・6節）。 |
+| `/health`（最終確認） | `time:trigger`の実行とscheduler heartbeatの更新を確認した後、`GET /health`が**HTTP 200**で、`app`・`database`・`config`・`scheduler`の**4componentすべてが`ok`**であることを確認する。12.1節のスモークテスト時点では`scheduler=ng`（HTTP 503）を許容したが、Scheduler再開後・heartbeat更新後はこの一時的な許容が終わるため、最終的に通常運用と同じ全component `ok`（HTTP 200）へ戻っていることを確認する。 |
 | logs | 12.4節を参照。 |
 
 ### 12.3 外部副作用のある確認への配慮

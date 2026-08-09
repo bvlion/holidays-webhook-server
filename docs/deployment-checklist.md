@@ -11,7 +11,7 @@ Issue #226でPHP 8.5への本番切り替えを行う際も、このチェック
 - [ ] 対象commit / tagを特定した（[`deployment.md`](deployment.md) 4-1）
 - [ ] 対象commitに対応する`test.yaml`（`make check`）がGitHub Actions上で成功している（4-2）
 - [ ] `src/composer.json`のPHP / Laravel / Composer要件を確認した（4-3）
-- [ ] 本番PHPの実バージョンを確認し、上記要件を満たすことを確認した（4-4）。**満たさない場合はここで中止する。** Issue #226のPHP 8.5初回切り替え作業に限り、[`php85-production-switch.md`](php85-production-switch.md) 8節の例外条件をすべて満たす場合だけ、本番PHPが要件を満たさない状態でのtag pushが許容される。
+- [ ] 本番PHPの実バージョンを確認し、上記要件を満たすことを確認した（4-4）。**満たさない場合はここで中止する。** Issue #226のPHP 8.5初回切り替え作業に限り、[`php85-production-switch.md`](php85-production-switch.md) 8節の例外条件をすべて満たす場合だけ、本番PHPが要件を満たさない状態でのtag pushが許容される。**このチェックリストを上から読んでいる現時点では、8節の例外条件（Scheduler停止済み・アプリ/DBバックアップ取得済み等）をまだ満たせていないことが通常である。ここでは通常判定どおり「本番PHPが要件を満たさない」ことだけを確認し、その後は`php85-production-switch.md` 9節の切り替え順序（Scheduler停止→backup→…）に沿って進める。8節の例外条件8項目すべての最終確認は、tag pushを実行する直前（9節手順5の直前）に行う。**
 - [ ] 必要なPHP拡張が本番に入っていることを確認した（4-8）
 - [ ] `docker/db/sql/`の差分有無を確認し、schema変更の有無を判定した（4-9、[`deployment.md`](deployment.md) 7節）
 - [ ] schema変更がある場合、対象Issue/PRに適用手順・ロールバック手順が明示されている（[`deployment.md`](deployment.md) 7.2節）
@@ -69,7 +69,7 @@ Issue #226でPHP 8.5への本番切り替えを行う際も、このチェック
 
 - [ ] deployしたtag／commit、実施日時、実施者を記録した
 - [ ] deploy前チェックの結果（特にPHP要件・schema変更有無の判定）を記録した
-- [ ] backupの取得先・取得日時を記録した
+- [ ] backupの取得方法・保管場所の安全な要約（XServerアカウント名・ユーザー名・絶対パス・秘密情報等は含めない）と取得日時を記録した
 - [ ] 主要機能確認・scheduler確認・ログ確認の結果を記録した
 - [ ] ロールバックを実施した場合、判断理由・実施内容・結果を記録した
 - [ ] 未解決の問題・後続Issue候補があれば記録した
