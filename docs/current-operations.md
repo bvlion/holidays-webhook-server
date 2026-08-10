@@ -140,8 +140,8 @@ READMEには「masterにプッシュ」と記載されているが、実際の�
 
 1. リポジトリをチェックアウトする。
 2. GitHub SecretsのSSH秘密鍵とknown hostsをRunnerへ配置する。
-3. `src/vendor` のキャッシュを復元する。
-4. キャッシュがない場合はComposerコンテナで依存関係をインストールする。
+3. `docker/web/Dockerfile` の既定イメージ（PHP 8.5.9 + Composer 2.8.12、`test.yaml`と同一環境）をbuildする（Issue #226）。
+4. そのイメージのコンテナ内で、cacheの有無に関わらず必ず `composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader` を実行し、本番用vendorを生成する（Issue #226。production vendor cacheは廃止した）。
 5. SSHで配備先へ接続し、`logs` 以外の通常表示されるファイルとディレクトリを削除する。
 6. `src/` の内容をrsyncで配備先へ転送する。
 7. Slackへ結果を通知する。
