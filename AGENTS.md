@@ -33,6 +33,7 @@ Codex等のAIエージェントがこのリポジトリで作業する際に守�
 - 継続運用向けの整理版アーキテクチャ: [`docs/architecture.md`](docs/architecture.md)
 - ドメインルール: [`docs/domain.md`](docs/domain.md)
 - ローカル・CI・本番の運用詳細: [`docs/current-operations.md`](docs/current-operations.md)
+- Pull Requestレビュー運用: [`docs/pull-request-review.md`](docs/pull-request-review.md)
 - 秘密情報の扱い: [`docs/secrets-management.md`](docs/secrets-management.md)
 - 依存関係更新（Dependabot）の運用: [`docs/dependency-updates.md`](docs/dependency-updates.md)
 - セットアップ・日常コマンド: [`README.md`](README.md)
@@ -87,6 +88,35 @@ make check
 - `make check` が成功していること（失敗した場合は原因を修正するか、修正できない場合はPR本文に明記する）。
 - 変更内容・検証結果（`make check` の結果）を日本語でPR本文に簡潔に記載すること。
 - スコープ外の変更（無関係なリファクタリング、ドキュメント整備タスクでのアプリケーションコード変更など）を含めないこと。
+- Codex Code Reviewの運用は [`docs/pull-request-review.md`](docs/pull-request-review.md) に従うこと。
+
+## Code Review Rules
+
+Codex Code Reviewでは、フォーマットや一般論よりも、対象Issueの意図に対する正しさと本リポジトリ固有の安全性を優先して確認する。
+
+### Issue・仕様との整合
+
+- PRが対象Issueの目的・完了条件を満たしているか確認する。
+- Issueにない無関係なリファクタリング、依存追加、schema変更、本番運用変更を混入させていないか確認する。
+- 既存の設計・運用ドキュメントが正として指定されている場合、一般的な実装へ勝手に置き換えていないか確認する。
+
+### セキュリティ・外部連携
+
+- 認証・認可の抜け、ユーザー/グループ境界の崩れ、秘密情報や個人情報のレスポンス・ログへの漏洩を優先して指摘する。
+- Google認証、Google Calendar、任意の外部HTTP実行では、失敗時の挙動と秘密情報の扱いに回帰がないか確認する。
+- 外部HTTPのテストが実サービスへ通信していないか確認する。
+
+### Scheduler・DB・本番運用
+
+- `time:trigger`等のScheduler処理について、実行条件・失敗処理・heartbeat・既存の定期実行挙動を壊していないか確認する。
+- DB schema変更や既存データへ影響する処理が、対象Issueで明示されないまま追加されていないか確認する。
+- deploy workflow、tag、Cron、本番PHP、backup/rollbackに関わる変更では、既存runbookや安全条件を弱めていないか確認する。
+
+### レビューの優先度
+
+- 重大な正しさ・セキュリティ・データ損失・本番障害につながる問題を優先する。
+- Laravel PintやPHPStan/Larastan、既存テストで機械的に検出できる軽微なスタイル指摘を重複して列挙しない。
+- 好みだけの命名変更や、対象Issueと無関係なアーキテクチャ変更を要求しない。
 
 ## 安全上の必須ルール
 
