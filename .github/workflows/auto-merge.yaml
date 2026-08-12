@@ -1,0 +1,32 @@
+name: auto-merge
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    # 同一リポジトリ内から作成されたPRのみを対象にする。
+    # フォークからのPRは対象外（GITHUB_TOKENの書き込み権限も付与されない）。
+    # ここではauto-mergeを有効化するだけで、PR側の未信頼コードは
+    # checkoutも実行もしない。
+    if: >
+      github.repository == 'bvlion/holidays-webhook-server' &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      # Dependabot・人間作成を問わず、main向けの全PRでauto-merge（merge commit）を
+      # 有効化する。実際のマージ可否はmain rulesetのrequired `test`・
+      # 必須Approve（人間による1件以上）に従う。ここでは判定を行わない。
+      - name: enable auto-merge (merge commit)
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -10,9 +10,9 @@ updates:
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 10
     groups:
-      # patchのみをまとめる。auto-mergeワークフローはこのグループのPRを
-      # dependabot/fetch-metadataのupdate-typeで判定するため、
-      # patch以外のupdate-typeを混在させないこと。
+      # patch/minorはPRをまとめて確認負荷を下げるためのグルーピングであり、
+      # マージ条件（test成功+人間Approve必須のauto-merge）には影響しない。
+      # patch/minor/majorいずれも通常PRと同じマージ条件が適用される。
       composer-patch:
         applies-to: version-updates
         update-types:
@@ -21,7 +21,7 @@ updates:
         applies-to: version-updates
         update-types:
           - "minor"
-      # majorはグルーピングしない（個別PRのまま、手動確認）。
+      # majorはグルーピングしない（個別PRのまま）。
 
   # GitHub Actions (.github/workflows/*.yaml)
   - package-ecosystem: "github-actions"
@@ -41,4 +41,4 @@ updates:
         applies-to: version-updates
         update-types:
           - "minor"
-      # majorはグルーピングしない（個別PRのまま、手動確認）。
+      # majorはグルーピングしない（個別PRのまま）。
