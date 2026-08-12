@@ -2,7 +2,7 @@
 
 ## 1. 目的と対象
 
-この文書は、Issue #222 に基づき、Dependabotによる依存関係更新の運用方針を定める。
+この文書は、Dependabotによる依存関係更新の運用方針を定める。Issue #222で導入したpatch限定の自動マージ運用は、Issue #258で「`main`向けの全PRに共通のCI成功+人間Approveによるauto-merge」へ統一された。ここでいう「全PR」は、`bvlion/holidays-webhook-server`リポジトリ内のブランチから作成された`main`向けPRを指す。フォークからのPRは対象外である（5節）。Dependabotは同一リポジトリ内にブランチを作成するため、この対象に含まれる。
 
 対象は次のとおりである。
 
@@ -22,55 +22,62 @@
 - `composer-minor` / `actions-minor`: `update-types: ["minor"]` のみを含むグループ
 - major更新はグループに含めない（個別PRのまま作成される）
 
-patchグループとminorグループを分離し、majorをどちらとも混在させないことで、後述のauto-mergeワークフローが「そのPRがpatchのみで構成されているか」を安全に判定できるようにしている。
+このグルーピングは、関連する更新をまとめてレビューしやすくするためのものであり、後述のマージ条件（4節）には一切影響しない。patch/minor/majorのいずれも同じ条件でマージされる。
 
 ## 4. patch / minor / majorの扱い
 
-| 区分 | PRの単位 | 自動マージ |
+Issue #258により、patch / minor / major、およびDependabot以外の通常PRを区別しない運用へ統一した。`main`向けの全PR（同一リポジトリ内のブランチから作成されたもの。1節参照）は次の条件に従う。
+
+| 区分 | PRの単位 | マージ条件 |
 | --- | --- | --- |
-| patch | グループ化（`composer-patch` / `actions-patch`） | する |
-| minor | グループ化（`composer-minor` / `actions-minor`） | しない（手動確認） |
-| major | 個別PR | しない（手動確認・個別対応） |
+| patch | グループ化（`composer-patch` / `actions-patch`） | `test`成功 + 人間Approve1件（[`docs/pull-request-review.md`](pull-request-review.md)） |
+| minor | グループ化（`composer-minor` / `actions-minor`） | 同上 |
+| major | 個別PR | 同上 |
+| 通常PR（人間・AIエージェント作成） | 個別PR | 同上 |
 
-## 5. patch自動マージの条件
+patchだけを自動マージし、minor/majorを手動対応とする区分はIssue #258で廃止した。
 
-`.github/workflows/dependabot-auto-merge.yaml` が、`dependabot/fetch-metadata` を使い、GitHub公式ドキュメント（[Automating Dependabot with GitHub Actions](https://docs.github.com/en/code-security/tutorials/secure-your-dependencies/automate-dependabot-with-actions)）の手順に沿って以下をすべて満たす場合だけ `gh pr merge --auto --merge` でauto-mergeを有効化する。
+## 5. auto-mergeの条件
 
-- PR作成者が `dependabot[bot]`（`github.actor` と `pull_request.user.login` の両方で確認）
+`.github/workflows/auto-merge.yaml` が、`main`向けに開かれた全PR（同一リポジトリ内のブランチから作成されたもの。Draft PRを除く）に対して、作成者やDependabotのupdate-typeを判定せず一律に `gh pr merge --auto --merge` を実行し、GitHubのauto-merge機能を有効化する。
+
 - 対象リポジトリが `bvlion/holidays-webhook-server`（フォークからのPRを除外）
 - base branchが `main`
-- `dependabot/fetch-metadata` の `update-type` 出力が `version-update:semver-patch`
-- mainブランチのruleset上で必須の `test` チェックが成功していること（後述）
+- PRがDraftでない
 
-minor・major、および人間が作成した通常のPRはこの条件に一致しないため自動マージされない。専用のPersonal Access Tokenは追加せず、標準の `GITHUB_TOKEN` のみを使用する。
+以前使用していた `dependabot/fetch-metadata` によるDependabot判定・semver update-type判定は、patch限定の自動マージを廃止したことに伴い削除した。専用のPersonal Access Tokenは追加せず、標準の `GITHUB_TOKEN` のみを使用する。
 
-`gh pr merge --auto` はGitHubの auto-merge 機能を有効化するだけであり、実際のマージ可否は、mainブランチで必須化した `test` ステータスチェックの結果に従う。
+`gh pr merge --auto` はGitHubの auto-merge 機能を有効化するだけであり、実際のマージ可否はmainブランチのrulesetが必須化した条件に従う（6節）。
 
-- `test` が成功するまで、実際のマージは行われない。
-- `test` が失敗している状態ではマージされない。
-- その後 `test` を再実行するなどして成功すれば、他の条件（PR作成者、base branch、`update-type` 等）を満たしている限り、有効化されたauto-mergeによって自動的にマージされ得る。auto-merge自体はCI失敗によって解除されるわけではない。
+- `test` の成功と人間による1件以上のApproveが両方揃うまで、実際のマージは行われない。
+- 一方だけが成立した状態ではマージされない。
+- auto-merge自体はCI失敗やレビュー未完了によって解除されるわけではなく、条件が揃った時点で自動的にマージされる。
 
 ## 6. mainブランチの保護（ruleset）
 
-リポジトリruleset「main protection」（`refs/heads/main` 対象、enforcement: active）で次を必須化した。
+Issue #258で、`refs/heads/main` を対象とするrulesetを2つに分離した。1つのrulesetに`required_approving_review_count`とbypass許可を同居させると、bypass対象者が`required_status_checks`等の必須条件までまとめて回避できてしまうため、bypass範囲を最小化する目的で分離している。
 
-- `pull_request` ルール: Pull Request経由のマージのみを許可し、直接pushを禁止する（レビュー承認は必須化していない。`required_approving_review_count: 0`）
-- `required_status_checks` ルール: `test` チェックの成功を必須とする
-- `non_fast_forward` ルール: force pushを禁止する
+- **`main protection`**（bypass設定なし。誰も回避できない）
+  - `pull_request` ルール: Pull Request経由のマージのみを許可し、直接pushを禁止する。マージ方式は `merge`（merge commit）のみに制限する。
+  - `required_status_checks` ルール: `test` チェックの成功を必須とする。
+  - `non_fast_forward` ルール: force pushを禁止する。
+- **`main protection - human approval`**（`required_approving_review_count: 1` のみを扱う）
+  - `pull_request` ルール: 人間による1件以上のApproveを必須とする。新しいコミットがpushされた場合は既存のApproveを無効化する（`dismiss_stale_reviews_on_push: true`）。
+  - bypass_actors: リポジトリ管理者 `bvlion`（GitHub User ID: 24517539）に対し、`bypass_mode: pull_request`（Pull Request経由のマージ時のみ有効。直接pushの許可ではない）でこのrulesetのみのbypassを許可する。
 
-既存の手動PR運用（レビュー承認なしでマージできる運用）は変更していない。
+GitHubはPR作成者自身によるApproveを許可しないため、`bvlion`が作成したPRは誰もApproveできない。このため、`bvlion`自身が作成したPRに限り、`test`成功を人間が確認したうえで、GitHubの bypass merge（Approve要件のみ回避可能。`required_status_checks`は前述のとおり別rulesetにあり、`bvlion`を含め誰もbypassできないため回避されない）で手動マージする。`bvlion`以外が作成したPRは、`test`成功 + 人間のApprove1件が揃うとauto-mergeで自動的にmerge commitされる。
 
 ## 7. auto-merge有効化のためのリポジトリ設定
 
-- リポジトリ設定 `allow_auto_merge` を `true` に変更した（変更前: `false`）。
-- マージ方式は既存運用に合わせ、`merge commit` を使用する（`gh pr merge --auto --merge`）。squash・rebaseのリポジトリ設定自体は変更していない。
+- リポジトリ設定 `allow_auto_merge` は `true`（Issue #222で変更済み、変更なし）。
+- マージ方式は既存運用に合わせ、`merge commit` を使用する（`gh pr merge --auto --merge`、およびrulesetの `allowed_merge_methods: ["merge"]`）。squash・rebaseのリポジトリ設定自体は変更していない。
 - `allow_update_branch` は変更していない（`false` のまま）。mainブランチの `required_status_checks` は `strict_required_status_checks_policy: false` とし、ブランチが最新でなくても、PRのhead commitで `test` が成功していればマージ可能とした。
 
 ## 8. Dependabot PRの手動対応方法
 
-- minor・majorのPRは、内容を確認し、CIが成功していることを確認したうえで手動でマージする。
 - CIが失敗したPRは、依存先の変更内容を確認し、必要に応じてコード側を修正するか、Dependabotのリベースを待つ。
 - 古いDependabot PRでmainの現状と矛盾する、または既に不要になったものがあれば、内容を確認したうえで手動でclose/rebaseする（自動では処理しない）。
+- patch / minor / major問わず、`bvlion`以外がApproveすればauto-mergeでマージされる。`bvlion`自身がApprove代わりにbypass mergeする対応は、Dependabot PRか通常PRかを問わない（6節）。
 
 ## 9. 既知の古いDependabot PR
 

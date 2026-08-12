@@ -24,7 +24,7 @@ Codex等のAIエージェントがこのリポジトリで作業する際に守�
 | `src/app/Libs/HolidayList.php` | Google Calendar APIからの祝日取得とファイルキャッシュ |
 | `docker/db/sql/` | ローカルMySQL初回起動時のテーブル定義（Laravelマイグレーションは存在しない） |
 | `docker/` | ローカル・CI用のWeb/DB/checkerイメージ定義 |
-| `.github/workflows/` | test・deploy・dependabot auto-merge |
+| `.github/workflows/` | test・deploy・auto-merge（Dependabot/通常PR共通） |
 | `docs/` | 本リポジトリの調査・運用資料一式 |
 
 ## 実装時に参照すべきドキュメント

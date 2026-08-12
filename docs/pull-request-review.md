@@ -28,18 +28,22 @@ Codexレビュー自体をmainへのマージ必須status checkにはしない�
 
 ## 3. 既存CI・main rulesetとの関係
 
-Issue #257対応時点のmain ruleset `main protection` は次の状態である。
+Issue #258対応後のmainブランチは、`refs/heads/main`を対象とする2つのrulesetで保護されている。
 
-- mainへの変更はPull Request経由とする。
-- required status checkは`test`。
-- `test`では`make check`を実行する。
-- Codexレビューはrequired status checkではない。
-- approving reviewの必須数は0。
-- force pushは禁止する。
+- **`main protection`**（bypassなし。誰も回避できない）
+  - mainへの変更はPull Request経由とする（直接pushは禁止）。マージ方式は`merge`（merge commit）のみ。
+  - required status checkは`test`（`make check`を実行）。
+  - force pushは禁止する。
+- **`main protection - human approval`**
+  - 人間による1件以上のApproveを必須とする（`required_approving_review_count: 1`）。
+  - 新しいコミットがpushされると既存のApproveは無効化される（`dismiss_stale_reviews_on_push: true`）。
+  - リポジトリ管理者`bvlion`のみ、Pull Request経由のマージ時に限り（`bypass_mode: pull_request`）このrulesetのApprove要件をbypassできる。`main protection`側は誰もbypassできないため、`bvlion`のPRでも`test`は必ず成功が必須。
 
-したがって、Codexレビューが成功していても`test`が失敗しているPull Requestはマージ条件を満たさない。一方、Codexレビューの完了そのものはGitHubのruleset上のマージ条件には含めない。
+GitHubの仕様上、PR作成者は自分自身のPRをApproveできない。このリポジトリのcollaboratorは`bvlion`のみであるため、`bvlion`が作成したPR（AIエージェント経由のPRを含む）は、`test`成功を人間が確認したうえで`bvlion`がGitHubのbypass merge機能で手動マージする。`bvlion`以外が作成したPRは、`test`成功 + 人間のApprove1件が揃うと、`.github/workflows/auto-merge.yaml`が有効化したauto-mergeによって自動的にmerge commitでマージされる。
 
-人間Approveを必須化し、条件を満たしたPull Requestを自動マージする運用はIssue #258で別途扱う。#258の実装後は、同Issueでこの文書のマージ条件に関する記述も現行設定へ合わせて更新する。
+上記2つのrulesetは`refs/heads/main`向けの全PRに適用され、PRの作成元（同一リポジトリ内のブランチかフォークか）を問わない。一方、`.github/workflows/auto-merge.yaml`がauto-mergeを自動的に有効化する対象は、同一リポジトリ内のブランチから作成された`main`向けPRのみである（[`docs/dependency-updates.md`](dependency-updates.md)参照）。フォークからのPRを受け付ける場合は対象外となり、`test`成功・人間のApproveが揃っていても、権限を持つ人間が手動でauto-mergeを有効化するかマージする必要がある。
+
+Codexレビューはrequired status checkではなく、上記いずれのrulesetのマージ条件にも含まれない。Codexレビューが成功していても`test`が失敗している、または人間のApprove（`bvlion`のPRの場合はbypass merge）がなければマージされない。
 
 ## 4. 通常のレビュー手順
 
@@ -48,6 +52,8 @@ Issue #257対応時点のmain ruleset `main protection` は次の状態である
 3. Automatic reviewsが有効であればCodexレビューを確認する。
 4. 修正push後など、明示的な再レビューが必要なら`@codex review`をコメントする。
 5. Codexの指摘と人間の確認結果を踏まえてマージ可否を判断する。
+6. `bvlion`以外が作成したPRは、人間のApproveを行う（`test`成功と揃うとauto-mergeで自動的にマージされる）。
+7. `bvlion`自身が作成したPRは、`test`成功を確認したうえで`bvlion`がGitHubのbypass merge機能で手動マージする（自分自身はApproveできないため）。
 
 ## 5. Codexのレビュー観点
 
