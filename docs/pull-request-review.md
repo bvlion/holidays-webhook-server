@@ -41,6 +41,8 @@ Issue #258対応後のmainブランチは、`refs/heads/main`を対象とする2
 
 GitHubの仕様上、PR作成者は自分自身のPRをApproveできない。このリポジトリのcollaboratorは`bvlion`のみであるため、`bvlion`が作成したPR（AIエージェント経由のPRを含む）は、`test`成功を人間が確認したうえで`bvlion`がGitHubのbypass merge機能で手動マージする。`bvlion`以外が作成したPRは、`test`成功 + 人間のApprove1件が揃うと、`.github/workflows/auto-merge.yaml`が有効化したauto-mergeによって自動的にmerge commitでマージされる。
 
+上記2つのrulesetは`refs/heads/main`向けの全PRに適用され、PRの作成元（同一リポジトリ内のブランチかフォークか）を問わない。一方、`.github/workflows/auto-merge.yaml`がauto-mergeを自動的に有効化する対象は、同一リポジトリ内のブランチから作成された`main`向けPRのみである（[`docs/dependency-updates.md`](dependency-updates.md)参照）。フォークからのPRを受け付ける場合は対象外となり、`test`成功・人間のApproveが揃っていても、権限を持つ人間が手動でauto-mergeを有効化するかマージする必要がある。
+
 Codexレビューはrequired status checkではなく、上記いずれのrulesetのマージ条件にも含まれない。Codexレビューが成功していても`test`が失敗している、または人間のApprove（`bvlion`のPRの場合はbypass merge）がなければマージされない。
 
 ## 4. 通常のレビュー手順

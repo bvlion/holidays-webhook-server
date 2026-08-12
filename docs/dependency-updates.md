@@ -2,7 +2,7 @@
 
 ## 1. 目的と対象
 
-この文書は、Dependabotによる依存関係更新の運用方針を定める。Issue #222で導入したpatch限定の自動マージ運用は、Issue #258で「`main`向けの全PRに共通のCI成功+人間Approveによるauto-merge」へ統一された。
+この文書は、Dependabotによる依存関係更新の運用方針を定める。Issue #222で導入したpatch限定の自動マージ運用は、Issue #258で「`main`向けの全PRに共通のCI成功+人間Approveによるauto-merge」へ統一された。ここでいう「全PR」は、`bvlion/holidays-webhook-server`リポジトリ内のブランチから作成された`main`向けPRを指す。フォークからのPRは対象外である（5節）。Dependabotは同一リポジトリ内にブランチを作成するため、この対象に含まれる。
 
 対象は次のとおりである。
 
@@ -26,7 +26,7 @@
 
 ## 4. patch / minor / majorの扱い
 
-Issue #258により、patch / minor / major、およびDependabot以外の通常PRを区別しない運用へ統一した。`main`向けの全PRは次の条件に従う。
+Issue #258により、patch / minor / major、およびDependabot以外の通常PRを区別しない運用へ統一した。`main`向けの全PR（同一リポジトリ内のブランチから作成されたもの。1節参照）は次の条件に従う。
 
 | 区分 | PRの単位 | マージ条件 |
 | --- | --- | --- |
